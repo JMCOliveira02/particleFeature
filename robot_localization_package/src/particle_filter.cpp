@@ -905,7 +905,7 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
     if (!resample_flag_)
     {
         // replaceWorstParticles(replace_worst_percentage_);
-        // replaceWorstParticles_pgm(replace_worst_percentage_);
+        replaceWorstParticles_pgm(replace_worst_percentage_);
     }
     else
     {
