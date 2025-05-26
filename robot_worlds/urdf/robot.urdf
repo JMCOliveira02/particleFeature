@@ -7,6 +7,12 @@
                 <alwaysOn>true</alwaysOn>
             </ros>
         </device>
+        <device reference="lidar2D" type="Lidar">
+            <ros>
+                <topicName>/scan3D</topicName>
+                <alwaysOn>true</alwaysOn>
+            </ros>
+        </device>
         <plugin type="robot_controller::RobotController" />
         <plugin type="webots_ros2_driver::Ros2RGBD">
             <camera>camera</camera>
