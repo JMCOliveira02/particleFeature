@@ -1,0 +1,14 @@
+# Ignore all
+*
+
+# Except these
+!robot_localization_package/
+!robot_localization_package/**
+!robot_msgs/
+!robot_msgs/**
+!robot_worlds/
+!robot_worlds/**
+!.vscode/
+!README.md
+!.gitignore
+!LICENSE
