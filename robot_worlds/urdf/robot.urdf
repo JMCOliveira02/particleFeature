@@ -7,7 +7,7 @@
                 <alwaysOn>true</alwaysOn>
             </ros>
         </device>
-        <device reference="lidar2D" type="Lidar">
+        <device reference="lidar3D" type="Lidar">
             <ros>
                 <topicName>/scan3D</topicName>
                 <alwaysOn>true</alwaysOn>
