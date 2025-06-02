@@ -30,7 +30,7 @@ def generate_launch_description():
         worlds_dir, 'feature_maps', world_setup + '.yaml')
     map_features_detection = os.path.join(
         worlds_dir, 'feature_maps', world_setup + '_detection' + '.yaml')
-    rviz_config = os.path.join(worlds_dir, 'rviz', 'corners_orientation.rviz')
+    rviz_config = os.path.join(localization_dir, 'rviz', 'pf_3d.rviz')
 
     # Webots
     webots = WebotsLauncher(world=world_file)
@@ -47,13 +47,10 @@ def generate_launch_description():
         executable='fake_detector',
         name='fake_detector',
         output='screen',
-        parameters=[
-            {"map_features": map_features_detection},
-        ]
-
+        parameters=[{"map_features": map_features_detection},]
     )
 
-    # Ransac corner Detector
+    # 2D Ransac corner Detector
     corner_detector = Node(
         package="robot_feature_detector",
         executable="corners",
@@ -61,20 +58,35 @@ def generate_launch_description():
         output="screen"
     )
 
+    # Fake segmentator
+    fake_segmentator = Node(
+        package = "robot_pointnet",
+        executable="fake_segmentator",
+        name="fake_segmentator"
+    )
+
+    # 3D Ransac corner detector
+    corner_detector_3D = Node(
+        package="robot_feature_detector",
+        executable="corners_3D",
+        name="corners_3D",
+        output="screen"
+    )
+
+
+    # OneFormer thigs
     send_scan = Node(
         package='com_perception_package',
         executable='send_scan_node',
         name='send_scan_node',
         output='screen'
     )
-
     recv_results = Node(
         package='com_perception_package',
         executable='recv_results_node',
         name='recv_results_node',
         output='screen'
     )
-
     perception = Node(
         package='com_perception_package',
         executable='perception_node',
@@ -88,7 +100,6 @@ def generate_launch_description():
         'config',
         'particle_filter_params.yaml'
     )
-
     particle_filter = Node(
         package='robot_localization_package',
         executable='particle_filter',
@@ -109,8 +120,6 @@ def generate_launch_description():
         parameters=[{'yaml_filename': map_yaml}],
         output='screen'
     )
-
-    # Map server lifecycle manager
     lifecycle_manager = Node(
         package='nav2_lifecycle_manager',
         executable='lifecycle_manager',
@@ -126,13 +135,17 @@ def generate_launch_description():
         name='map_to_odom_broadcaster',
         arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom']
     )
-
-    tf_base_to_lidar = Node(
+    tf_base_to_lidar_2D = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         name='base_to_lidar_broadcaster',
-        arguments=['0', '0', '0', '0', '0', '0',
-                   'base_footprint_real', 'lidar2D']
+        arguments=['0', '0', '0', '0', '0', '0', 'base_footprint_real', 'lidar2D']
+    )
+    tf_base_to_lidar_3D = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='base_to_lidar_broadcaster',
+        arguments=["0.13", "0", "0.25", "0", "0", "0", "base_footprint_real", "lidar3D"]
     )
 
     # RViz
@@ -144,7 +157,7 @@ def generate_launch_description():
         output='screen'
     )
 
-    # Teleop (optional)
+    # Teleop
     teleop = Node(
         package='teleop_twist_keyboard',
         executable='teleop_twist_keyboard',
@@ -165,15 +178,17 @@ def generate_launch_description():
         rviz,
         webots,
         robot_controller,
+        particle_filter,
         #fake_detector,
         #path_tracker,
-        corner_detector,
-        particle_filter,
+        corner_detector_3D,
+        fake_segmentator,
         # send_scan,
         # recv_results,
         # perception,
         tf_map_to_odom,
-        tf_base_to_lidar,
+        tf_base_to_lidar_2D,
+        tf_base_to_lidar_3D,
         map_server,
         lifecycle_manager,
         teleop,

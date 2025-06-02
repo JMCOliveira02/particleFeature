@@ -82,6 +82,16 @@ ParticleFilter::ParticleFilter() : Node("particle_filter"),
     // Load parameters from the parameter file
     loadParameters();
 
+    // Load PGM and calculate free space
+    calculateFreeSpaceFromPGM();
+     
+    // Initialize some variables
+    init_weight = 1.0 / num_particles_;
+
+    distr_theta = std::uniform_real_distribution<double>(-M_PI, M_PI);
+    distr_pgm_index = std::uniform_int_distribution<>(0, free_pixels.size() - 1);
+    generator_ = std::mt19937(rd());
+
     // Retrieve the map_features parameter passed from the launch file
 
     this->get_parameter("map_features", map_features_);
@@ -108,7 +118,7 @@ ParticleFilter::ParticleFilter() : Node("particle_filter"),
     // Create publishers for the estimated pose and particles
     pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/estimated_pose", 10);
     particles_color_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/particles_color", 10);
-    particles_no_color_pub_ = this->create_publisher<geometry_msgs::msg::PoseArray>("/particles__no_color", 10);
+    particles_no_color_pub_ = this->create_publisher<geometry_msgs::msg::PoseArray>("/particles_no_color", 10);
 
     // Create a transform broadcaster
     tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
@@ -118,9 +128,6 @@ ParticleFilter::ParticleFilter() : Node("particle_filter"),
 
     // Initialize the color pallete for the particles weights
     computeColorWeightLookup();
-
-    // Load PGM and calculate free space
-    calculateFreeSpaceFromPGM();
 
     // Initialize the particles
     initializeParticles_pgm();
@@ -364,23 +371,14 @@ void ParticleFilter::replaceWorstParticles_pgm(double percentage)
 
     int num_replace = static_cast<int>(num_particles_ * percentage);
 
-    // Sample random particles
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> index_dist(0, free_pixels.size() - 1);
-
-    std::uniform_real_distribution<double> dist_theta(-M_PI, M_PI);
-
-    double init_weight = 1.0 / num_particles_;
-
     for (int i = 0; i < num_replace; i++)
     {
-        auto [x_pix, y_pix] = free_pixels[index_dist(gen)];
+        auto [x_pix, y_pix] = free_pixels[distr_pgm_index(generator_)];
         auto [x, y] = pixelToWorld(x_pix, y_pix, resolution, origin, pgm.height);
 
         particles_[i].x = x;
         particles_[i].y = y;
-        particles_[i].theta = dist_theta(generator_);
+        particles_[i].theta = distr_theta(generator_);
         particles_[i].weight = init_weight;
     }
 
@@ -390,12 +388,6 @@ void ParticleFilter::replaceWorstParticles_pgm(double percentage)
 // replace and inject random particles into the filter in white part of pgm (free space)
 void ParticleFilter::injectRandomParticles_pgm(double percentage)
 {
-    // replace random particles
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> index_dist(0, free_pixels.size() - 1);
-
-    std::uniform_real_distribution<double> dist_theta(-M_PI, M_PI);
 
     int num_replace = static_cast<int>(num_particles_ * percentage);
 
@@ -405,16 +397,14 @@ void ParticleFilter::injectRandomParticles_pgm(double percentage)
         index = rand() % static_cast<int>(num_particles_);
     }
 
-    double init_weight = 1.0 / num_particles_;
-
     for (int i : random_indices)
     {
-        auto [x_pix, y_pix] = free_pixels[index_dist(gen)];
+        auto [x_pix, y_pix] = free_pixels[distr_pgm_index(generator_)];
         auto [x, y] = pixelToWorld(x_pix, y_pix, resolution, origin, pgm.height);
 
         particles_[i].x = x;
         particles_[i].y = y;
-        particles_[i].theta = dist_theta(generator_);
+        particles_[i].theta = distr_theta(generator_);
         particles_[i].weight = init_weight;
     }
 }
@@ -431,9 +421,8 @@ void ParticleFilter::injectRandomParticles_pgm(double percentage)
 void ParticleFilter::storeMapMessage(const robot_msgs::msg::FeatureArray::SharedPtr msg)
 {
     // lets save the timestamp
-
     last_map_msg_ = msg;
-    last_map_msg_timestamp_ = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type());
+    stored_features_are_valid = true;
     RCLCPP_INFO(this->get_logger(), "Received features");
 }
 
@@ -503,10 +492,6 @@ double ParticleFilter::computeAngleLikelihood(double measured_angle, double expe
         measured_angle -= 2 * M_PI;
     if (measured_angle < -M_PI)
         measured_angle += 2 * M_PI;
-    if (expected_angle > M_PI)
-        expected_angle -= 2 * M_PI;
-    if (expected_angle < -M_PI)
-        expected_angle += 2 * M_PI;
 
     double error = measured_angle - expected_angle;
 
@@ -548,7 +533,7 @@ double ParticleFilter::computeLikelihoodFeature(const Particle &p, double noisy_
 
     if (with_angle_)
     {
-        likelihood = (angle_likelihood * distance_likelihood);
+        likelihood = (angle_likelihood + distance_likelihood);
     }
     else
     {
@@ -615,8 +600,7 @@ void ParticleFilter::residualResample()
     }
 
     std::uniform_real_distribution<double> dist(0.0, sum_residuals);
-    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-    generator_.seed(seed);
+
     while (total_copies < num_particles_)
     {
         double r = dist(generator_);
@@ -641,60 +625,35 @@ void ParticleFilter::residualResample()
 //! Particle Filter Functions !//
 #pragma region pf functions
 
+void ParticleFilter::initializeParticle(Particle &p, double weight)
+{
+    auto [x_pix, y_pix] = free_pixels[distr_pgm_index(generator_)];
+    auto [x, y] = pixelToWorld(x_pix, y_pix, resolution, origin, pgm.height);
+    p.x = x;
+    p.y = y;
+    p.theta = distr_theta(generator_);
+    p.weight = weight;
+}
+
 void ParticleFilter::initializeParticles_pgm()
 {
-    // Sample random particles
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> index_dist(0, free_pixels.size() - 1);
-    std::uniform_real_distribution<> theta_dist(-M_PI, M_PI);
-    std::uniform_real_distribution<double> dist_theta(-M_PI, M_PI);
-    double init_weight = 1.0 / num_particles_;
-
+    RCLCPP_INFO(this->get_logger(),"init weight: %.2f", init_weight );
     particles_.resize(num_particles_);
     for (auto &p : particles_)
     {
-        auto [x_pix, y_pix] = free_pixels[index_dist(gen)];
-        auto [x, y] = pixelToWorld(x_pix, y_pix, resolution, origin, pgm.height);
-
-        geometry_msgs::msg::Pose pose;
-        p.x = x;
-        p.y = y;
-        p.theta = dist_theta(generator_);
-        p.weight = init_weight;
+        initializeParticle(p, init_weight);
     }
-
-    /* while(1){
-        publishParticles();
-        rclcpp::spin_some(this->get_node_base_interface());
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    } */
-
-    /* if (free_pixels.size() < static_cast<size_t>(num_particles_)) {
-        throw std::runtime_error("Not enough free pixels");
-    } */
-
-    /* while(1){
-        publishParticles();
-        rclcpp::spin_some(this->get_node_base_interface());
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    } */
-
-    /*  for (auto &p : particles_) {
-         p.x = dist_x(generator_);
-         p.y = dist_y(generator_);
-         p.theta = dist_theta(generator_);
-         p.weight = 1.0 / num_particles_;
-     }  */
 }
 
 void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
 {
+    //RCLCPP_INFO(this->get_logger(), "Motion!");
     if (particles_.empty())
     {
         RCLCPP_WARN(this->get_logger(), "No particles to update.");
         return;
     }
+
 
     msg_odom_base_link_ = msg;
 
@@ -727,6 +686,7 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
     // update particles if significant motion is detected
     if (delta_distance > motion_delta_distance_ || std::abs(delta_theta_odom) > motion_delta_angle_)
     {
+        RCLCPP_INFO(this->get_logger(), "Motion Update!");
         for (auto &p : particles_)
         {
             p.x += delta_x_robot * std::cos(p.theta) - delta_y_robot * std::sin(p.theta) + noise_x(generator_);
@@ -737,7 +697,18 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
                 p.theta -= 2 * M_PI;
             if (p.theta < -M_PI)
                 p.theta += 2 * M_PI;
+
+            bool penalize = !isParticleInFreeSpace(p.x, p.y, pgm, resolution, origin);
+            if (penalize)
+            {
+                initializeParticle(p, init_weight);
+            }
         }
+        
+        RCLCPP_INFO(this->get_logger(), "Motion Update after particles!");
+
+
+        //normalizeWeights();
 
         last_x_ = odom_x;
         last_y_ = odom_y;
@@ -750,12 +721,10 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
         }
         // update the particles weights
         measurementUpdate(last_map_msg_);
+
+        RCLCPP_INFO(this->get_logger(), "Motion Update after measurements");
     }
-    else if (delta_distance < motion_delta_distance_ / 2 || std::abs(delta_theta_odom) < motion_delta_angle_ / 2)
-    {
-        // Save the timestamp of this motion update
-        last_motion_update_timestamp_ = this->get_clock()->now();
-    }
+
     if(with_color_){
         publishParticles_with_color();
     }   
@@ -771,20 +740,10 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
         RCLCPP_WARN(this->get_logger(), "No particles to update.");
         return;
     }
-
-    if (last_map_msg_timestamp_ < last_motion_update_timestamp_)
-    {
-        // Print the timestamps for debugging
-        RCLCPP_DEBUG(this->get_logger(), "Last map message timestamp: %.2f.%ld",
-                     last_map_msg_timestamp_.seconds(), last_map_msg_timestamp_.nanoseconds());
-        RCLCPP_DEBUG(this->get_logger(), "Last motion update timestamp: %.2f.%ld",
-                     last_motion_update_timestamp_.seconds(), last_motion_update_timestamp_.nanoseconds());
-
-        RCLCPP_WARN(this->get_logger(), "Skipping measurement update: Map message is older than the last motion update.");
+    if(!stored_features_are_valid){
         return;
     }
-
-    bool all_outside = true;
+    stored_features_are_valid = false;
 
     for (auto &p : particles_)
     {
@@ -799,18 +758,6 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
             double sigma_theta = std::sqrt(obs.angle_variance);
             double sigma_pos = std::sqrt((sigma_x * sigma_x + sigma_y * sigma_y) / 2.0);
 
-            //! VER ISTO (os noises não são só para o calculo da likelihood?)
-            /*std::normal_distribution<double> noise_pos_x(0.0, sigma_x);
-            std::normal_distribution<double> noise_pos_y(0.0, sigma_y);
-            std::normal_distribution<double> noise_pos_z(0.0, sigma_z);
-            std::normal_distribution<double> noise_theta(0.0, sigma_theta);
-
-            double noisy_x = obs.x + noise_pos_x(generator_);
-            double noisy_y = obs.y + noise_pos_y(generator_);
-            double noisy_z = obs.z + noise_pos_z(generator_);
-            double measured_theta = obs.theta + noise_theta(generator_); */
-            // ! ########
-
             // Compute likelihood based on feature type
 
             likelihood += std::pow(computeLikelihoodFeature(p, obs.x, obs.y, obs.theta, sigma_pos, sigma_theta, obs.type), 3);
@@ -818,31 +765,18 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
 
         p.weight *= likelihood;
 
-        bool penalize = !isParticleInFreeSpace(p.x, p.y, pgm, resolution, origin);
-        if (penalize)
-        {
-            p.weight = p.weight / 4;
-        }
-        else
-        {
-            all_outside = false;
-        }
     }
 
-    if (all_outside == true)
-    {
-        RCLCPP_WARN(this->get_logger(), "All particles are outside the free space.");
-        injectRandomParticles_pgm(1);
-        return;
-    }
-    else
-    {
-        // RCLCPP_INFO(this->get_logger(), "Not all particles are outside the free space.");
-        normalizeWeights();
-    }
+
+
+    RCLCPP_INFO(this->get_logger(), "Measurement before normalize!");
+    normalizeWeights();
 
     // perform resampling
+    RCLCPP_INFO(this->get_logger(), "Measurement before resample!");
     resampleParticles(ResamplingAmount::ESS, ResamplingMethod::RESIDUAL);
+    RCLCPP_INFO(this->get_logger(), "Measurement after resample!");
+
 
     // Replace worst particles if resampling flag is not set
     if (!resample_flag_)
@@ -869,21 +803,21 @@ void ParticleFilter::resampleParticles(ResamplingAmount type, ResamplingMethod m
                                        [](double sum, const Particle &p)
                                        { return sum + (p.weight * p.weight); });
 
-    // RCLCPP_INFO(this->get_logger(), "Max weight: %f, ESS: %f", max_weight, ess);
+    RCLCPP_INFO(this->get_logger(), "Max weight: %f, ESS: %f", max_weight, ess);
 
     switch (type)
     {
     case ResamplingAmount::ESS:
         if (ess > num_particles_ * resample_ess_threshold_)
         {
-            // RCLCPP_INFO(this->get_logger(), "Skipping resampling, particles are well-distributed.");
+            RCLCPP_INFO(this->get_logger(), "Skipping resampling, particles are well-distributed.");
             return;
         }
         break;
     case ResamplingAmount::MAX_WEIGHT:
         if (max_weight < resample_max_weight_threshold_ / num_particles_)
         {
-            // RCLCPP_INFO(this->get_logger(), "Skipping resampling, max weight is not high enough.");
+            RCLCPP_INFO(this->get_logger(), "Skipping resampling, max weight is not high enough.");
             return;
         }
         break;
@@ -902,7 +836,7 @@ void ParticleFilter::resampleParticles(ResamplingAmount type, ResamplingMethod m
     // Reset particle weights after resampling
     for (auto &p : particles_)
     {
-        p.weight = 1.0 / num_particles_;
+        p.weight = init_weight;
     }
 
     // Inject random particles base on number of resamples performed
@@ -911,7 +845,7 @@ void ParticleFilter::resampleParticles(ResamplingAmount type, ResamplingMethod m
     {
         RCLCPP_INFO(this->get_logger(), "Injecting random particles.");
         // injectRandomParticles(inject_percentage_);
-        injectRandomParticles_pgm(inject_percentage_);
+        //injectRandomParticles_pgm(inject_percentage_);
 
         iterationCounter = 0;
     }
