@@ -7,10 +7,10 @@ centralWidgetVisible: 1
 projectionMode: PERSPECTIVE
 orthographicViewHeight: 43.9003
 textFiles: -1
-globalOptionalRendering: LidarRaysPaths
+globalOptionalRendering: LidarRaysPaths::CameraFrustums
 consoles: Console:All:All
-renderingDevicePerspectives: robot:camera;1;1;0;0
-renderingDevicePerspectives: robot:rangeFinder;1;1;0;0
+renderingDevicePerspectives: robot:camera;1;5.14063;0;0
+renderingDevicePerspectives: robot:rangeFinder;0;1;0;0
 renderingDevicePerspectives: robot_blue:camera;1;1;0;0
 renderingDevicePerspectives: robot_blue:rangeFinder;1;1;0;0
 renderingDevicePerspectives: robot_red:camera;1;1;0;0

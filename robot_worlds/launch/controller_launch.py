@@ -10,7 +10,7 @@ from webots_ros2_driver.webots_controller import WebotsController
 def generate_launch_description():
     world_dir = get_package_share_directory('robot_worlds')
     robot_description_path = os.path.join(world_dir, 'urdf', 'robot.urdf')
-    world_setup = 'iilab_test'
+    world_setup = 'iilab'
 
     robot_controller = WebotsController(
         robot_name='robot',
