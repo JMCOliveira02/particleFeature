@@ -173,8 +173,7 @@ private:
 
     // Particle filter state
     double iterationCounter = 0.0;
-    bool first_update_ = true;
-    bool with_angle_ = true;
+    bool with_angle_ = false;
     
     // Last estimated pose
     double last_x_ = 0.0, last_y_ = 0.0, last_theta_ = 0.0;

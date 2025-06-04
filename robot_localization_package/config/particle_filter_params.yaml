@@ -2,13 +2,13 @@ particle_filter:
   ros__parameters:
     num_particles: 20000.0
     motion_delta_distance: 0.1
-    motion_delta_angle: 0.1
+    motion_delta_angle: 0.01
     motion_x_variance: 0.01
     motion_y_variance: 0.01
     motion_angle_variance: 0.01
     resample_ess_threshold: 0.5
     resample_max_weight_threshold: 3.0
     inject_num_iterations: 10
-    inject_percentage: 0.30
+    inject_percentage: 0.10
     replace_worst_percentage: 0.10
     estimate_num_particles: 10

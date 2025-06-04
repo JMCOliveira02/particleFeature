@@ -33,6 +33,13 @@ def generate_launch_description():
         arguments=["0", "0", "0", "0", "0", "0", "map", "odom"]
     )
 
+    tf_static_rgbd = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        name="map_to_odom_broadcaster",
+        arguments=["0", "0", "0", "0", "-0.5", "0", "base_footprint", "rgbd"]
+    )
+
     tf_static_lidar = Node(
         package="tf2_ros",
         executable="static_transform_publisher",
@@ -44,6 +51,7 @@ def generate_launch_description():
     return LaunchDescription([
         tf_static,
         tf_static_lidar,
+        tf_static_rgbd,
         robot_controller,
         teleop
     ])

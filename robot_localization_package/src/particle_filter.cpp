@@ -73,7 +73,7 @@ bool isParticleInFreeSpace(double x_world, double y_world, const PGMImage &pgm, 
 }
 
 ParticleFilter::ParticleFilter() : Node("particle_filter"),
-                                   last_x_(0.0), last_y_(0.0), last_theta_(0.0), iterationCounter(0.0), first_update_(true),
+                                   last_x_(0.0), last_y_(0.0), last_theta_(0.0), iterationCounter(0.0),
                                    msg_odom_base_link_(nullptr), last_map_msg_(nullptr)
 {
     std::cout << "ParticleFilter Constructor START" << std::endl;
@@ -845,7 +845,7 @@ void ParticleFilter::resampleParticles(ResamplingAmount type, ResamplingMethod m
     {
         RCLCPP_INFO(this->get_logger(), "Injecting random particles.");
         // injectRandomParticles(inject_percentage_);
-        //injectRandomParticles_pgm(inject_percentage_);
+        injectRandomParticles_pgm(inject_percentage_);
 
         iterationCounter = 0;
     }

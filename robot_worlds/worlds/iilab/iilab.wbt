@@ -4,8 +4,8 @@ WorldInfo {
 }
 Viewpoint {
   fieldOfView 2
-  orientation -0.34766705246324503 0.03014792009468955 0.9371332474869748 2.51823278897637
-  position -1.0829521220014837 1.0347033965377834 0.8849465142054047
+  orientation -0.07950719552350219 -0.06451006815877587 0.9947447194964834 2.787448295989089
+  position -1.5481531751144968 6.650554339280746 1.2917341632352959
   exposure 5
   follow "robot"
   followType "Mounted Shot"
@@ -62,17 +62,20 @@ Background {
   ]
 }
 DEF ROBOT_1 Robot {
-  translation -1.5200118998551222 1.5977785265338578 0.3964229263315205
-  rotation 0.02063152122255651 -0.0027089277014204966 0.9997834775803967 2.876848748047924
+  translation -1.2736453998796666 2.9023547488613426 0.396378304037695
+  rotation 0.020333567183231812 -0.030323134728325856 0.9993333045315026 1.1913369382340395
   children [
     RangeFinder {
       translation 0 0 0.17
-      rotation 0 -1 0 -0.0346
+      rotation 0 -1 0 0.5
       name "rangeFinder"
+      fieldOfView 1.5
+      maxRange 15
     }
     Camera {
       translation 0 0 0.17
-      rotation 0 -1 0 -0.0346
+      rotation 0 -1 0 0.5
+      fieldOfView 1.5
     }
     Lidar {
       translation 0.00553488 0 0.159904
@@ -234,23 +237,23 @@ DEF ROBOT_1 Robot {
     }
     DEF CASTER_WHEEL HingeJoint {
       jointParameters HingeJointParameters {
-        position 3.578950247629584
+        position 3.5789434842634082
         axis 0 0 1
         anchor -0.1918 0 0
         staticFriction 1
       }
       endPoint Solid {
-        translation -0.19180092841392882 3.3202131733876533e-06 0.00012943463177877976
-        rotation -0.4103395006274949 -0.6448333083204055 -0.6448344738809635 3.920369827961412
+        translation -0.19180092839147297 3.3202194525108242e-06 0.00012943463177877976
+        rotation -0.41034204842136734 -0.6448324976750974 -0.6448336632337456 3.92037418921034
         children [
           DEF casterWheelRim HingeJoint {
             jointParameters HingeJointParameters {
-              position -4927.6764560971405
+              position -4882.396680355425
               anchor 0 -0.0521014 0.012843
             }
             endPoint Solid {
               translation 0 -0.0521014 0.012843
-              rotation -1 0 0 1.6591752683447465
+              rotation 1 0 0 5.921488630293373
               children [
                 DEF CASTER_WHEEL_RIM_SHAPE Shape {
                   appearance PBRAppearance {
@@ -389,7 +392,7 @@ DEF ROBOT_1 Robot {
     }
     DEF LEFT_WHEEL HingeJoint {
       jointParameters HingeJointParameters {
-        position 5.259764794574463e-07
+        position 16.61789205295439
         axis 0 1 0
         anchor 0 0.165 0
       }
@@ -403,8 +406,8 @@ DEF ROBOT_1 Robot {
         }
       ]
       endPoint Solid {
-        translation 0.00012209866153722998 0.1649999220967009 -3.543627955935483e-06
-        rotation 0.5773501709871681 -0.5773501664300721 -0.5773504701515847 2.0943946916792737
+        translation -7.214689849578261e-05 0.1649999220967009 9.856706085560419e-05
+        rotation -0.6871828600901267 0.6871829165315373 -0.23571032227198593 2.678622711409982
         children [
           DEF BLACK_CYLINDER_SHAPE Shape {
             appearance PBRAppearance {
@@ -572,7 +575,7 @@ DEF ROBOT_1 Robot {
     }
     DEF RIGHT_WHEEL HingeJoint {
       jointParameters HingeJointParameters {
-        position -5.830132874251603e-07
+        position 10.890210540014639
         axis 0 1 0
         anchor 0 -0.165 0
       }
@@ -586,8 +589,8 @@ DEF ROBOT_1 Robot {
         }
       ]
       endPoint Solid {
-        translation 8.30752716662496e-06 -0.16500007497486968 2.988383328302822e-06
-        rotation 0.5773503807373652 -0.5773503814919899 -0.577350045339457 2.09439533830643
+        translation -3.845499782213696e-06 -0.16500007497486968 7.947173960980368e-06
+        rotation 0.7066157398191756 -0.7066157831450601 0.03726031736435491 3.216078754469256
         children [
           DEF RIGHT_BLACK_CYLINDER_SHAPE Shape {
             appearance PBRAppearance {
@@ -734,6 +737,6 @@ DEF ROBOT_1 Robot {
   }
   controller "<extern>"
   supervisor TRUE
-  linearVelocity -1.0078017576020813e-10 1.575132801967828e-11 -3.5769102169068027e-10
-  angularVelocity -8.927330713320206e-10 -1.3878656671159097e-09 5.647213934299263e-10
+  linearVelocity -5.177435258296726e-11 -1.721606825988431e-10 -1.4402985470951535e-12
+  angularVelocity 2.5299366240671267e-11 -1.3597719195142138e-11 -7.618431640257583e-10
 }
