@@ -174,47 +174,47 @@ private:
     // Particle filter state
     double iterationCounter = 0.0;
     bool first_update_ = true;
-    bool with_angle_ = true;
-    
+    bool with_angle_ = false;
+
     // Last estimated pose
     double last_x_ = 0.0, last_y_ = 0.0, last_theta_ = 0.0;
     double x_last_final = 0.0, y_last_final = 0.0, theta_last_final = 0.0;
-    
+
     // Color weight lookup
     bool with_color_ = false;
     std::vector<std::pair<double, std::vector<double>>> ColorWeightLookup;
-    
+
     // Variables for automatic particle initialization from pgm
     PGMImage pgm;
     std::vector<std::pair<int, int>> free_pixels;
     double resolution;
     std::vector<double> origin;
-    
+
     // PGM loader
     void calculateFreeSpaceFromPGM();
-    
+
     // Initialization
     void initializeParticle(Particle &p, double weight);
     void initializeParticles_pgm();
-    
+
     // Particle filter steps
     void motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg);
     void measurementUpdate(const robot_msgs::msg::FeatureArray::SharedPtr msg);
     void resampleParticles(ResamplingAmount type, ResamplingMethod method);
-    
+
     // Resampling methods
     void residualResample();
-    
+
     // Particle management
     void normalizeWeights();
     double maxWeight();
     void replaceWorstParticles_pgm(double percentage);
     void injectRandomParticles_pgm(double percentage);
-    
+
     // Pose estimation
     void computeEstimatedPose();
     void publishEstimatedPose();
-    
+
     // Particle visualization
     void publishParticles_with_color();
     void publishParticles_no_color();
