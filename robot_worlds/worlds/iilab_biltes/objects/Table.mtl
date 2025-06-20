@@ -10,5 +10,4 @@ newmtl Material__29
 #Ni 1.000000          # Refractive index: 1.0 = no refraction
 #d 1.000000           # Transparency: fully opaque
 #illum 2              # Illumination model: 2 = ambient + diffuse + specular
-
 Kd 1.0 0.0 0.0  # Red
