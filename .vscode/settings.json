@@ -75,7 +75,17 @@
         "typeindex": "cpp",
         "typeinfo": "cpp",
         "valarray": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "csignal": "cpp",
+        "strstream": "cpp",
+        "cfenv": "cpp",
+        "codecvt": "cpp",
+        "expected": "cpp",
+        "regex": "cpp",
+        "source_location": "cpp",
+        "future": "cpp",
+        "shared_mutex": "cpp",
+        "stdfloat": "cpp"
     },
     "cmake.sourceDirectory": "/home/joao/ros2_ws/src/robot_worlds",
     "python.autoComplete.extraPaths": [
@@ -91,5 +101,6 @@
         "/home/joao/ros2_ws/install/robot_feature_detector/lib/python3.12/site-packages",
         "/home/joao/ros2_ws/install/mcl/lib/python3.12/site-packages",
         "/opt/ros/jazzy/lib/python3.12/site-packages"
-    ]
+    ],
+    "cmake.ignoreCMakeListsMissing": true
 }

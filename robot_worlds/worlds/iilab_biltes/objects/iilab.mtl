@@ -1,0 +1,34 @@
+# S3DIS-Compatible Materials for iilab.obj
+
+newmtl Material__25 
+Kd 0.94 0.92 0.88   # Walls - Off-white (typical office walls)
+
+newmtl Material__26 
+Kd 0.85 0.85 0.80   # Beams - Concrete gray-beige
+
+newmtl Material__27_1 
+Kd 1.0 1.0 0.0
+#Kd 0.82 0.82 0.78   # Columns - Structural concrete (slightly darker than walls)
+
+newmtl Material__28 
+#Kd 0.90 0.95 1.00   # Windows - Light blue glass tint
+Kd 0.0 0.0 1.0 
+#d 0.8               # 80% transparent (was 0.7)
+
+newmtl Material__28_2 
+Kd 0.95 0.95 0.92   # Gates/Doors - Off-white door color
+
+newmtl Material__30
+Kd 0.96 0.96 0.94   # Ceiling - Slightly whiter than walls
+
+newmtl Material__31
+Kd 0.90 0.90 0.85   # Window frames - Light gray (distinct from walls)
+
+newmtl Material__32
+Kd 0.20 0.70 0.20   # Unknown green element - Muted green
+
+newmtl galao
+Kd 0.75 0.65 0.55   # Floor - Realistic concrete/tile color
+
+newmtl Default_Material
+Kd 0.88 0.88 0.85   # Corridor Rectangles - Light gray

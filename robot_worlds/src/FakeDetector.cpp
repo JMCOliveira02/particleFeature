@@ -134,8 +134,6 @@ void KeypointDetector::publishTransformedFeatures(const geometry_msgs::msg::Tran
 
         feature_msg.confidence = 0.95;
 
-        feature_array_msg.header.stamp = this->get_clock()->now();
-
         feature_array_msg.features.push_back(feature_msg);
 
         // MARKER -----------------------------------

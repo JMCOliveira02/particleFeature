@@ -5,6 +5,7 @@
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
 #include <geometry_msgs/msg/point.hpp>
+#include <geometry_msgs/msg/point_stamped.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <tf2_ros/transform_listener.h>
@@ -159,15 +160,19 @@ private:
 
     nav_msgs::msg::Odometry::SharedPtr msg_odom_base_link_;
 
-    // Timestamp of the last received map message
-    rclcpp::Time last_map_msg_timestamp_;
     // Timestamp of the last motion update
     rclcpp::Time last_motion_update_timestamp_;
 
     // Particle filter state
     double iterationCounter = 0.0;
     bool first_update_ = true;
-    bool with_angle_ = true;
+    bool with_angle_ = false;
+
+    double min_avg_confidence_;
+    double min_observation_likelihood_;
+    bool suppress_resample_on_weak_obs_;
+    int resample_cooldown_;
+    int resample_cooldown_counter_;
 
     // Last estimated pose
     double last_x_ = 0.0, last_y_ = 0.0, last_theta_ = 0.0;
@@ -187,7 +192,6 @@ private:
 
     // Initialization
     void initializeParticles_pgm();
-    void initializeParticles();
 
     // Particle filter steps
     void motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg);
@@ -215,6 +219,7 @@ private:
 
     // Feature handling
     void storeMapMessage(const robot_msgs::msg::FeatureArray::SharedPtr msg);
+    bool new_map = false;
     std::vector<map_features::Feature> getExpectedFeatures(const Particle &p, const std::string &type);
     double transformAngleToParticleFrame(double feature_theta_map, double particle_theta);
     double computeAngleLikelihood(double measured_angle, double expected_angle, double sigma);

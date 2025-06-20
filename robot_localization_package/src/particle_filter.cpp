@@ -126,7 +126,7 @@ ParticleFilter::ParticleFilter() : Node("particle_filter"),
 
     while (rclcpp::ok() && !last_map_msg_)
     {
-        RCLCPP_INFO(this->get_logger(), "Waiting for the first keypoint message...");
+        // RCLCPP_INFO(this->get_logger(), "Waiting for the first keypoint message...");
         rclcpp::spin_some(this->get_node_base_interface());
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
@@ -176,6 +176,12 @@ void ParticleFilter::loadParameters()
     success &= this->get_parameter("map_features", map_features_);
     success &= this->get_parameter("map_yaml", map_yaml_);
     success &= this->get_parameter("map_pgm", map_pgm_);
+    success &= this->get_parameter("min_avg_confidence", min_avg_confidence_);
+    success &= this->get_parameter("min_observation_likelihood", min_observation_likelihood_);
+    success &= this->get_parameter("suppress_resample_on_weak_obs", suppress_resample_on_weak_obs_);
+    success &= this->get_parameter("resample_cooldown", resample_cooldown_);
+
+    resample_cooldown_counter_ = 0;
 
     if (!success)
     {
@@ -406,15 +412,21 @@ void ParticleFilter::injectRandomParticles_pgm(double percentage)
 // store the map message received from the topic
 void ParticleFilter::storeMapMessage(const robot_msgs::msg::FeatureArray::SharedPtr msg)
 {
-    // lets save the timestamp
-
     last_map_msg_ = msg;
-    last_map_msg_timestamp_ = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type());
-    RCLCPP_INFO(this->get_logger(), "Received features");
+    new_map = true;
+
+    // Print received message details
+    RCLCPP_INFO(this->get_logger(), "Received FeatureArray message with %zu features", last_map_msg_->features.size());
+    for (const auto &obs_msg : last_map_msg_->features)
+    {
+        RCLCPP_INFO(this->get_logger(), "Feature - Type: %s, X: %.2f, Y: %.2f, Confidence: %.2f",
+                    obs_msg.type.c_str(), obs_msg.x, obs_msg.y, obs_msg.confidence);
+    }
 }
 
 std::vector<map_features::Feature> ParticleFilter::getExpectedFeatures(const Particle &p, const std::string &type)
 {
+
     std::vector<map_features::Feature> features_particle;
 
     double cos_theta = std::cos(p.theta);
@@ -426,7 +438,10 @@ std::vector<map_features::Feature> ParticleFilter::getExpectedFeatures(const Par
         {
             auto object_ptr = std::dynamic_pointer_cast<map_features::Feature>(feature_ptr);
             if (!object_ptr)
+            {
+                RCLCPP_DEBUG(this->get_logger(), "Skipping feature due to type mismatch or invalid cast.");
                 continue;
+            }
 
             double map_x = object_ptr->x;
             double map_y = object_ptr->y;
@@ -438,6 +453,15 @@ std::vector<map_features::Feature> ParticleFilter::getExpectedFeatures(const Par
             features_particle.emplace_back(particle_x, particle_y, feature_theta, type);
         }
     }
+
+    /* RCLCPP_INFO(this->get_logger(), "Particle: x=%.2f, y=%.2f, theta=%.2f", p.x, p.y, p.theta);
+    RCLCPP_INFO(this->get_logger(), "Type: %s", type.c_str());
+    RCLCPP_INFO(this->get_logger(), "Number of features found: %zu", features_particle.size());
+    for (const auto &feature : features_particle)
+    {
+        RCLCPP_INFO(this->get_logger(), "Feature: x=%.2f, y=%.2f, theta=%.2f, type=%s",
+                    feature.x, feature.y, feature.theta, feature.type.c_str());
+    } */
 
     return features_particle;
 }
@@ -509,7 +533,11 @@ double ParticleFilter::computeLikelihoodFeature(const Particle &p, double noisy_
 
     for (const auto &exp : expected_features)
     {
+        // RCLCPP_INFO(this->get_logger(), "AAAAAAA");
+
         double dist = std::hypot(noisy_x - exp.x, noisy_y - exp.y);
+        // RCLCPP_INFO(this->get_logger(), "dist:%.1f ", dist);
+
         if (dist < min_dist)
         {
             min_dist = dist;
@@ -517,14 +545,21 @@ double ParticleFilter::computeLikelihoodFeature(const Particle &p, double noisy_
         }
     }
 
+    // RCLCPP_INFO(this->get_logger(), "min_dist: %.1f ", min_dist);
+
     // Compute likelihood based on distance and angle
-    double expected_feature_angle = transformAngleToParticleFrame(best_feature.theta, p.theta);
-    double angle_likelihood = computeAngleLikelihood(measured_theta, expected_feature_angle, sigma_theta);
-    double distance_likelihood = (std::exp(-(min_dist * min_dist) / (2 * sigma_pos * sigma_pos)));
+    // double expected_feature_angle = transformAngleToParticleFrame(best_feature.theta, p.theta);
+    // double angle_likelihood = computeAngleLikelihood(measured_theta, expected_feature_angle, sigma_theta);
+    double distance_likelihood = (std::exp(-(min_dist * min_dist) / (2 * 2 * 2)));
+    // RCLCPP_INFO(this->get_logger(), "min_dist: %.1f ", min_dist);
+
+    // RCLCPP_INFO(this->get_logger(), "sigma_pos: %.1f ", sigma_pos);
+
+    // RCLCPP_INFO(this->get_logger(), "distance_likelihood: %.1f ", distance_likelihood);
 
     if (with_angle_)
     {
-        likelihood = (angle_likelihood * distance_likelihood);
+        // likelihood = (angle_likelihood * distance_likelihood);
     }
     else
     {
@@ -812,15 +847,11 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
         // update the particles weights
         measurementUpdate(last_map_msg_);
     }
-    else if (delta_distance < motion_delta_distance_ / 2 || std::abs(delta_theta_odom) < motion_delta_angle_ / 2)
-    {
-        // Save the timestamp of this motion update
-        last_motion_update_timestamp_ = this->get_clock()->now();
-    }
 
     publishParticles();
 }
 
+// FIX 2: Correct the max_element usage in measurementUpdate
 void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::SharedPtr msg)
 {
     if (particles_.empty())
@@ -829,23 +860,24 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
         return;
     }
 
-    if (last_map_msg_timestamp_ < last_motion_update_timestamp_)
+    if (new_map == false)
     {
-        // Print the timestamps for debugging
-        RCLCPP_DEBUG(this->get_logger(), "Last map message timestamp: %.2f.%ld",
-                     last_map_msg_timestamp_.seconds(), last_map_msg_timestamp_.nanoseconds());
-        RCLCPP_DEBUG(this->get_logger(), "Last motion update timestamp: %.2f.%ld",
-                     last_motion_update_timestamp_.seconds(), last_motion_update_timestamp_.nanoseconds());
-
-        RCLCPP_WARN(this->get_logger(), "Skipping measurement update: Map message is older than the last motion update.");
         return;
     }
 
     bool all_outside = true;
 
+    // Handle empty feature messages gracefully
+    if (msg->features.empty())
+    {
+        RCLCPP_INFO(this->get_logger(), "No features detected - maintaining particle weights");
+        new_map = false;
+        return;
+    }
+
     for (auto &p : particles_)
     {
-        double likelihood = 0;
+        double likelihood = 1.0; // Start with 1.0
 
         for (const auto &obs_msg : msg->features)
         {
@@ -856,29 +888,38 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
             double sigma_theta = std::sqrt(obs.angle_variance);
             double sigma_pos = std::sqrt((sigma_x * sigma_x + sigma_y * sigma_y) / 2.0);
 
-            //! VER ISTO (os noises não são só para o calculo da likelihood?)
-            /*std::normal_distribution<double> noise_pos_x(0.0, sigma_x);
-            std::normal_distribution<double> noise_pos_y(0.0, sigma_y);
-            std::normal_distribution<double> noise_pos_z(0.0, sigma_z);
+            std::normal_distribution<double> noise_pos(0.0, sigma_pos);
             std::normal_distribution<double> noise_theta(0.0, sigma_theta);
 
-            double noisy_x = obs.x + noise_pos_x(generator_);
-            double noisy_y = obs.y + noise_pos_y(generator_);
-            double noisy_z = obs.z + noise_pos_z(generator_);
-            double measured_theta = obs.theta + noise_theta(generator_); */
-            // ! ########
+            double noise = noise_pos(generator_);
+            double noisy_x = obs.x + noise;
+            double noisy_y = obs.y + noise;
 
-            // Compute likelihood based on feature type
+            double measured_theta = obs.theta + noise_theta(generator_);
 
-            likelihood += std::pow(computeLikelihoodFeature(p, obs.x, obs.y, obs.theta, sigma_pos, sigma_theta, obs.type), 3);
+            // Actually compute the feature likelihood
+            double feature_likelihood = computeLikelihoodFeature(p, noisy_x, noisy_y, measured_theta, sigma_pos, sigma_theta, obs.type);
+
+            // RCLCPP_INFO(this->get_logger(), "feature likelihood: %.1f", likelihood);
+
+            // Apply the reliability factor correctly
+            likelihood *= (0.2 + feature_likelihood * obs.confidence);
         }
 
-        p.weight *= likelihood;
+        double theta_degrees = p.theta * 180.0 / M_PI;
 
+        // RCLCPP_INFO(this->get_logger(), "likelihood: %.1f  of particle p.x: %.1f , p.y: %.1f and p.theta: %.1f degrees", likelihood, p.x, p.y, theta_degrees);
+
+        // Gentle weight update instead of direct multiplication
+        double learning_rate = 0.8; // How much to trust this measurement
+        double new_weight = p.weight * likelihood;
+        p.weight = learning_rate * new_weight + (1.0 - learning_rate) * p.weight;
+
+        // Less harsh space penalty
         bool penalize = !isParticleInFreeSpace(p.x, p.y, pgm, resolution, origin);
         if (penalize)
         {
-            p.weight = p.weight / 4;
+            p.weight *= 0.1; // Less harsh than /4
         }
         else
         {
@@ -889,28 +930,56 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
     if (all_outside == true)
     {
         RCLCPP_WARN(this->get_logger(), "All particles are outside the free space.");
-        injectRandomParticles_pgm(1);
+        injectRandomParticles_pgm(1); // Smaller injection
+        new_map = false;
         return;
     }
     else
     {
-        // RCLCPP_INFO(this->get_logger(), "Not all particles are outside the free space.");
         normalizeWeights();
     }
 
-    // perform resampling
-    resampleParticles(ResamplingAmount::ESS, ResamplingMethod::RESIDUAL);
+    // Calculate ESS for resampling decision
+    double ess = 1.0 / std::accumulate(particles_.begin(), particles_.end(), 0.0,
+                                       [](double sum, const Particle &p)
+                                       { return sum + (p.weight * p.weight); });
 
-    // Replace worst particles if resampling flag is not set
+    // Adaptive ESS threshold based on number of features and their quality
+    double base_threshold = resample_ess_threshold_;
+    double adaptive_threshold = base_threshold;
+
+    if (msg->features.size() < 2) // Few features
+    {
+        // adaptive_threshold *= 0.5; // Much more conservative
+    }
+
+    double avg_weight = 1.0 / num_particles_;
+
+    // **AGGRESSIVE: Use OR instead of AND, lower weight ratio threshold**
+    bool ess_trigger = (ess <= num_particles_ * adaptive_threshold);
+
+    if (ess_trigger)
+    {
+        resampleParticles(ResamplingAmount::MAX_WEIGHT, ResamplingMethod::RESIDUAL);
+    }
+    else
+    {
+        RCLCPP_INFO(this->get_logger(), "NO RESAMPLING: ESS=%.1f",
+                    ess);
+    }
+
+    // Continuous small replacement to prevent stagnation
     if (!resample_flag_)
     {
-        // replaceWorstParticles(replace_worst_percentage_);
-        replaceWorstParticles_pgm(replace_worst_percentage_);
+        // Always replace a small percentage of worst particles
+        replaceWorstParticles_pgm(replace_worst_percentage_); // Replace 2% continuously
     }
     else
     {
         resample_flag_ = false;
     }
+
+    new_map = false;
 }
 
 void ParticleFilter::resampleParticles(ResamplingAmount type, ResamplingMethod method)
@@ -926,25 +995,32 @@ void ParticleFilter::resampleParticles(ResamplingAmount type, ResamplingMethod m
                                        [](double sum, const Particle &p)
                                        { return sum + (p.weight * p.weight); });
 
-    // RCLCPP_INFO(this->get_logger(), "Max weight: %f, ESS: %f", max_weight, ess);
+    RCLCPP_INFO(this->get_logger(), "RESAMPLING: Max weight: %.6f, ESS: %.1f", max_weight, ess);
 
-    switch (type)
+    // **IMPROVEMENT 1: Remove redundant ESS check - trust the caller's decision**
+    // The measurementUpdate function already made the smart decision to call this
+    // Don't second-guess it here!
+
+    // **IMPROVEMENT 2: Only check for extreme cases where resampling would be harmful**
+    /*     if (ess > num_particles_ * 0.8) // Only skip if ESS > 80% (very well distributed)
+        {
+            RCLCPP_INFO(this->get_logger(), "ESS too high (%.1f%%) - resampling would hurt diversity",
+                        (ess / num_particles_) * 100.0);
+            return;
+        } */
+
+    // **IMPROVEMENT 3: Add safety check for weight concentration**
+    double avg_weight = 1.0 / num_particles_;
+    double weight_ratio = max_weight / avg_weight;
+
+    /*if (weight_ratio < 2.0) // Very uniform weights
     {
-    case ResamplingAmount::ESS:
-        if (ess > num_particles_ * resample_ess_threshold_)
-        {
-            // RCLCPP_INFO(this->get_logger(), "Skipping resampling, particles are well-distributed.");
-            return;
-        }
-        break;
-    case ResamplingAmount::MAX_WEIGHT:
-        if (max_weight < resample_max_weight_threshold_ / num_particles_)
-        {
-            // RCLCPP_INFO(this->get_logger(), "Skipping resampling, max weight is not high enough.");
-            return;
-        }
-        break;
-    }
+        RCLCPP_INFO(this->get_logger(), "Weight ratio too low (%.2fx) - resampling unnecessary", weight_ratio);
+        return;
+    } */
+
+    RCLCPP_INFO(this->get_logger(), "Proceeding with resampling: ESS=%.1f",
+                ess);
 
     resample_flag_ = true;
 
@@ -965,20 +1041,35 @@ void ParticleFilter::resampleParticles(ResamplingAmount type, ResamplingMethod m
         break;
     }
 
-    // Reset particle weights after resampling
+    // **IMPROVEMENT 4: Gentle weight reset with small noise for diversity**
+    double base_weight = 1.0 / num_particles_;
+    std::uniform_real_distribution<double> noise_dist(0.95, 1.05); // ±5% noise
+
     for (auto &p : particles_)
     {
-        p.weight = 1.0 / num_particles_;
+        p.weight = base_weight * noise_dist(generator_); // Add small diversity
     }
 
-    // Inject random particles base on number of resamples performed
-    iterationCounter++;
-    if (iterationCounter == inject_num_iterations_)
-    {
-        RCLCPP_INFO(this->get_logger(), "Injecting random particles.");
-        // injectRandomParticles(inject_percentage_);
-        injectRandomParticles_pgm(inject_percentage_);
+    // Normalize to ensure weights sum to 1
+    normalizeWeights();
 
+    // **IMPROVEMENT 5: More intelligent injection strategy**
+    iterationCounter++;
+
+    // Inject based on how desperate we are (lower ESS = more injection)
+    bool should_inject = (iterationCounter >= inject_num_iterations_) || (ess < num_particles_ * 0.1);
+
+    if (should_inject)
+    {
+        // Scale injection based on ESS - worse ESS = more injection
+        double ess_ratio = ess / num_particles_;
+        double injection_scale = std::max(0.5, 1.0 - ess_ratio * 2.0); // More injection when ESS is low
+        double scaled_injection = inject_percentage_ * injection_scale;
+
+        RCLCPP_INFO(this->get_logger(), "Injecting %.1f%% random particles (ESS-scaled from %.1f%%)",
+                    scaled_injection * 100.0, inject_percentage_ * 100.0);
+
+        injectRandomParticles_pgm(scaled_injection);
         iterationCounter = 0;
     }
 }
@@ -1042,7 +1133,7 @@ void ParticleFilter::publishEstimatedPose()
 
     if (!msg_odom_base_link_)
     {
-        RCLCPP_WARN(this->get_logger(), "Skipping pose publication: No odometry data available.");
+        // RCLCPP_WARN(this->get_logger(), "Skipping pose publication: No odometry data available.");
         return;
     }
 

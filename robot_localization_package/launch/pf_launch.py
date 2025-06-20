@@ -17,7 +17,7 @@ def generate_launch_description():
     worlds_dir = get_package_share_directory('robot_worlds')
 
     # World setup
-    world_setup = "iilab"
+    world_setup = "iilab_biltes"
     # Paths to files
     robot_urdf = os.path.join(worlds_dir, 'urdf', 'robot.urdf')
     world_file = os.path.join(worlds_dir, 'worlds',
@@ -29,7 +29,7 @@ def generate_launch_description():
     map_features = os.path.join(
         worlds_dir, 'feature_maps', world_setup + '.yaml')
     map_features_detection = os.path.join(
-        worlds_dir, 'feature_maps', world_setup + '_detection' + '.yaml')
+        worlds_dir, 'feature_maps', world_setup + '.yaml')
     rviz_config = os.path.join(worlds_dir, 'rviz', 'corners_orientation.rviz')
 
     # Webots
@@ -72,13 +72,6 @@ def generate_launch_description():
         package='com_perception_package',
         executable='recv_results_node',
         name='recv_results_node',
-        output='screen'
-    )
-
-    perception = Node(
-        package='com_perception_package',
-        executable='perception_node',
-        name='perception_node',
         output='screen'
     )
 
@@ -165,13 +158,12 @@ def generate_launch_description():
         rviz,
         webots,
         robot_controller,
-        #fake_detector,
-        #path_tracker,
-        corner_detector,
+        # fake_detector,
+        # path_tracker,
+        # corner_detector,
         particle_filter,
-        # send_scan,
-        # recv_results,
-        # perception,
+        send_scan,
+        recv_results,
         tf_map_to_odom,
         tf_base_to_lidar,
         map_server,

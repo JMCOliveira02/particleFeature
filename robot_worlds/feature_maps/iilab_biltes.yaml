@@ -1,0 +1,48 @@
+features:
+  - type: chair
+    position: { x: -1.89, y: 6.27 }
+    orientation: { theta: 0 }
+
+  - type: chair
+    position: { x: -3.64, y: 0.96 }
+    orientation: { theta: 180 }
+
+  - type: chair
+    position: { x: -4.44, y: 6.43 }
+    orientation: { theta: -120 }
+
+  - type: chair
+    position: { x: -9.47, y: 3.77 }
+    orientation: { theta: -120 }
+
+  # === TABLES ===
+  - type: table
+    position: { x: -3.66, y: 0.54 }
+    orientation: { theta: 120 }
+
+  - type: table
+    position: { x: -3.14, y: 6.40 }
+    orientation: { theta: 120 }
+
+  - type: table
+    position: { x: -9.52, y: 6.40 }
+    orientation: { theta: 120 }
+
+  # === DOOR ===
+  - type: door
+    position: { x: -6.16, y: 8.78 }
+    orientation: { theta: 0 }
+
+  # === window ===
+  - type: window
+    position: { x: -1.57, y: 0.08 }
+    orientation: { theta: 0 }
+
+  - type: window
+    position: { x: -7.6, y: 0.08 }
+    orientation: { theta: 0 }
+
+  # === column ===
+  - type: column
+    position: { x: -4.53, y: 2.7 }
+    orientation: { theta: 0 }
