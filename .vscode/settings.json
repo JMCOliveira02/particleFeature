@@ -1,9 +1,12 @@
 {
     "github.copilot.enable": {
-        "*": false,
+        "*": true,
         "plaintext": false,
         "markdown": false,
-        "scminput": false
+        "scminput": false,
+        "cpp": false,
+        "python": true,
+        "yaml": false
     },
     "files.associations": {
         "cctype": "cpp",

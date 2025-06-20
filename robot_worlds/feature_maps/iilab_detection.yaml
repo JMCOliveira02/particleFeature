@@ -7,35 +7,35 @@ features:
     position: { x: -0.19, y: 8.66, z: 0.0}
     orientation: { theta: -135 } 
 
-#  - type: corner
-#    position: { x: -17.1, y: 13, z: 0.0}
-#    orientation: { theta: 135 } 
-#
-#  - type: corner
-#    position: { x: -17.1, y: 18.8, z: 0.0}
-#    orientation: { theta: -135 } 
-#    
-#  - type: corner
-#    position: { x: -28.5, y: 8.65, z: 0.0}
-#    orientation: { theta: -45 }
-# 
-#  - type: corner
-#    position: { x: -28.6, y: 0.23, z: 0.0}
-#    orientation: { theta: 45 }
-# 
-#  - type: corner
-#    position: { x: -16.8, y: 0.19, z: 0.0}
-#    orientation: { theta: 135 }
-# 
-#  - type: corner
-#    position: { x: -16.8, y: 2.9, z: 0.0}
-#    orientation: { theta: -45 }
-# 
-#  - type: corner
-#    position: { x: -10.4, y: 2.9, z: 0.0}
-#    orientation: { theta: -135 }
-# 
-#  - type: corner
-#    position: { x: -10.4, y: 0.4, z: 0.0}
-#    orientation: { theta: 45 }
+  - type: corner
+    position: { x: -17.1, y: 13, z: 0.0}
+    orientation: { theta: 135 } 
+
+  - type: corner
+    position: { x: -17.1, y: 18.8, z: 0.0}
+    orientation: { theta: -135 } 
+    
+  - type: corner
+    position: { x: -28.5, y: 8.65, z: 0.0}
+    orientation: { theta: -45 }
+ 
+  - type: corner
+    position: { x: -28.6, y: 0.23, z: 0.0}
+    orientation: { theta: 45 }
+ 
+  - type: corner
+    position: { x: -16.8, y: 0.19, z: 0.0}
+    orientation: { theta: 135 }
+ 
+  - type: corner
+    position: { x: -16.8, y: 2.9, z: 0.0}
+    orientation: { theta: -45 }
+ 
+  - type: corner
+    position: { x: -10.4, y: 2.9, z: 0.0}
+    orientation: { theta: -135 }
+ 
+  - type: corner
+    position: { x: -10.4, y: 0.4, z: 0.0}
+    orientation: { theta: 45 }
 

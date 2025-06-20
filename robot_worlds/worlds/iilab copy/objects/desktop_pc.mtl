@@ -1,0 +1,32 @@
+# Blender 4.2.2 LTS MTL File: 'desktop_pc.blend'
+# www.blender.org
+
+newmtl Material.001
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.185950 0.185950 0.185950
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+map_Kd Textures/17162929_4.jpeg
+
+newmtl Material.002
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.078512 0.078512 0.078512
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+map_Kd Textures/back_6_6.jpg
+
+newmtl Material.003
+Ns 745.867798
+Ka 0.586777 0.586777 0.586777
+Ks 0.268595 0.268595 0.268595
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+map_Kd Textures/41vTTspKwTL.jpg

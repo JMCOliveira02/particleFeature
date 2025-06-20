@@ -17,7 +17,7 @@
         <plugin type="webots_ros2_driver::Ros2RGBD">
             <camera>camera</camera>
             <rangeFinder>rangeFinder</rangeFinder>
-            <topicName>/rbgd_cloud</topicName>
+            <topicName>/rgbd_cloud</topicName>
             <alwaysOn>true</alwaysOn>
             <frameName>rgbd</frameName>
         </plugin>

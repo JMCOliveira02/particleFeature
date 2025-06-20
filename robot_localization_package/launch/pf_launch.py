@@ -64,6 +64,13 @@ def generate_launch_description():
         executable="fake_segmentator",
         name="fake_segmentator"
     )
+    
+    # PointNet segmentator
+    segmentator = Node(
+        package="robot_pointnet",
+        executable="pointnet_segmentator",
+        name="pointnet_segmentator"
+    )
 
     # 3D Ransac corner detector
     corner_detector_3D = Node(
@@ -71,27 +78,6 @@ def generate_launch_description():
         executable="corners_3D",
         name="corners_3D",
         output="screen"
-    )
-
-
-    # OneFormer thigs
-    send_scan = Node(
-        package='com_perception_package',
-        executable='send_scan_node',
-        name='send_scan_node',
-        output='screen'
-    )
-    recv_results = Node(
-        package='com_perception_package',
-        executable='recv_results_node',
-        name='recv_results_node',
-        output='screen'
-    )
-    perception = Node(
-        package='com_perception_package',
-        executable='perception_node',
-        name='perception_node',
-        output='screen'
     )
 
     # Particle filter
@@ -180,12 +166,10 @@ def generate_launch_description():
         robot_controller,
         particle_filter,
         #fake_detector,
-        #path_tracker,
         corner_detector_3D,
-        fake_segmentator,
-        # send_scan,
-        # recv_results,
-        # perception,
+        #path_tracker,
+        #fake_segmentator,
+        segmentator,
         tf_map_to_odom,
         tf_base_to_lidar_2D,
         tf_base_to_lidar_3D,

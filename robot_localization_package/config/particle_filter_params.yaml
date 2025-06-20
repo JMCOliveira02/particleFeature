@@ -10,5 +10,5 @@ particle_filter:
     resample_max_weight_threshold: 3.0
     inject_num_iterations: 10
     inject_percentage: 0.10
-    replace_worst_percentage: 0.10
+    replace_worst_percentage: 0.02
     estimate_num_particles: 10

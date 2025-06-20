@@ -146,7 +146,8 @@ private:
     double inject_percentage_;
     double replace_worst_percentage_;
     int estimate_num_particles_;
-    bool stored_features_are_valid = false;
+    double odom_x, odom_y, odom_theta;
+    
 
     // Logging
     std::ofstream log_file_;
@@ -173,11 +174,14 @@ private:
 
     // Particle filter state
     double iterationCounter = 0.0;
-    bool with_angle_ = false;
+    bool with_angle_ = true;
     
     // Last estimated pose
-    double last_x_ = 0.0, last_y_ = 0.0, last_theta_ = 0.0;
+    double last_odom_x_ = 0.0, last_odom_y_ = 0.0, last_odom_theta_ = 0.0;
+    double last_update_x_ = 0.0, last_update_y_ = 0.0, last_update_theta_ = 0.0;
+
     double x_last_final = 0.0, y_last_final = 0.0, theta_last_final = 0.0;
+    double pose_covariance_[3] = { 0.0, 0.0, 0.0};    
     
     // Color weight lookup
     bool with_color_ = false;

@@ -14,8 +14,11 @@
 #include "rclcpp/macros.hpp"
 #include "rclcpp/rclcpp.hpp"
 
+#include <std_msgs/msg/int64.hpp>
+
 #include "geometry_msgs/msg/twist.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
+#include <geometry_msgs/msg/pose_stamped.hpp>
 
 #include "nav_msgs/msg/odometry.hpp"
 #include <nav_msgs/msg/odometry.h>
@@ -43,6 +46,11 @@ private:
 
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr
       cmd_vel_subscription_;
+  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr
+      set_position_subscription_;
+  int pcl_count = 0;
+  rclcpp::Publisher<std_msgs::msg::Int64>::SharedPtr
+      set_position_confirmation_;
       
   geometry_msgs::msg::Twist cmd_vel_msg;
 
