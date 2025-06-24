@@ -548,8 +548,8 @@ double ParticleFilter::computeLikelihoodFeature(const Particle &p, double noisy_
     // RCLCPP_INFO(this->get_logger(), "min_dist: %.1f ", min_dist);
 
     // Compute likelihood based on distance and angle
-    // double expected_feature_angle = transformAngleToParticleFrame(best_feature.theta, p.theta);
-    // double angle_likelihood = computeAngleLikelihood(measured_theta, expected_feature_angle, sigma_theta);
+    double expected_feature_angle = transformAngleToParticleFrame(best_feature.theta, p.theta);
+    double angle_likelihood = computeAngleLikelihood(measured_theta, expected_feature_angle, sigma_theta);
     double distance_likelihood = (std::exp(-(min_dist * min_dist) / (2 * 2 * 2)));
     // RCLCPP_INFO(this->get_logger(), "min_dist: %.1f ", min_dist);
 
@@ -559,7 +559,7 @@ double ParticleFilter::computeLikelihoodFeature(const Particle &p, double noisy_
 
     if (with_angle_)
     {
-        // likelihood = (angle_likelihood * distance_likelihood);
+        likelihood = (angle_likelihood + distance_likelihood);
     }
     else
     {
@@ -578,6 +578,7 @@ ParticleFilter::DecodedMsg ParticleFilter::decodeMsg(const robot_msgs::msg::Feat
     feature.y = msg.y;
     feature.theta = msg.theta;
     feature.type = msg.type;
+    feature.with_angle = msg.with_angle;
     feature.confidence = msg.confidence;
     feature.angle_variance = msg.orientation_variance;
 
@@ -896,6 +897,8 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
             double noisy_y = obs.y + noise;
 
             double measured_theta = obs.theta + noise_theta(generator_);
+
+            with_angle_ = obs.with_angle;
 
             // Actually compute the feature likelihood
             double feature_likelihood = computeLikelihoodFeature(p, noisy_x, noisy_y, measured_theta, sigma_pos, sigma_theta, obs.type);

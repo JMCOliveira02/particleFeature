@@ -222,23 +222,23 @@ Solid {
     ]
   }
 }
-Solid {
-  translation -10.8399 31.98 -0.369973
-  rotation 0.5773499358549823 0.5773489358550934 0.5773519358547601 2.0944
-  children [
-    CadShape {
+  Solid {
+    translation -10.8399 31.98 -0.369973
+    rotation 0.5773499358549823 0.5773489358550934 0.5773519358547601 2.0944
+    children [
+      CadShape {
+        url [
+          "objects/Table.obj"
+        ]
+      }
+    ]
+    name "Table"
+    boundingObject Mesh {
       url [
         "objects/Table.obj"
       ]
     }
-  ]
-  name "Table"
-  boundingObject Mesh {
-    url [
-      "objects/Table.obj"
-    ]
   }
-}
 Solid {
   translation -6.68994 29.3 -0.369982
   rotation 0.5773499358549823 0.5773489358550934 0.5773519358547601 2.0944

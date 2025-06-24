@@ -4,8 +4,8 @@ WorldInfo {
 }
 Viewpoint {
   fieldOfView 2
-  orientation 0.032354678234834476 -0.07466872925739901 0.9966833778424349 3.8591851546398637
-  position -0.9135626303688712 7.3935029045622995 2.5024174984766656
+  orientation -0.10839388783164493 -0.025901478785930458 0.9937705361286593 2.396440079528676
+  position -0.7174717169384144 0.5658859787802988 2.005477824882277
   exposure 5
   follow "robot"
   followType "Mounted Shot"
@@ -72,7 +72,7 @@ Solid {
 }
 Solid {
   translation -1.8899 6.27 0.36989
-  rotation 0.5773499358549823 0.5773489358550934 0.5773519358547601 2.0944
+  rotation -3.675499999987874e-08 -2.568509999991526e-06 0.9999999999967009 3.14159
   children [
     CadShape {
       url [
@@ -89,7 +89,7 @@ Solid {
 }
 Solid {
   translation -3.6399 0.96 0.369873
-  rotation -1.2230496215227696e-06 0.7071047811838092 0.7071087811825714 -3.1415853071795863
+  rotation 1.1030999999878191e-06 4.568159999949556e-06 -0.9999999999889575 1.57079
   children [
     CadShape {
       url [
@@ -106,7 +106,7 @@ Solid {
 }
 Solid {
   translation -4.4399 6.43 0.36989
-  rotation -0.5773526025176962 0.5773476025211385 0.577350602519073 -2.094395307179586
+  rotation 0.9731757562280237 0.09727567563329795 0.20848594777610188 4.86755e-06
   children [
     CadShape {
       url [
@@ -123,7 +123,7 @@ Solid {
 }
 Solid {
   translation -9.4699 3.77 0.369883
-  rotation -0.5773526025176962 0.5773476025211385 0.577350602519073 -2.094395307179586
+  rotation -0.9472032091029885 0.065807114527468 0.31380806927574195 -5.307179586466759e-06
   children [
     CadShape {
       url [
@@ -276,7 +276,7 @@ Solid {
 }
 Solid {
   translation -3.6599 0.54 0.319882
-  rotation 0.5773499358549823 0.5773489358550934 0.5773519358547601 2.0944
+  rotation -2.069399999993832e-07 -2.432779999992749e-06 0.9999999999970195 -3.1415853071795863
   children [
     CadShape {
       url [
@@ -293,7 +293,7 @@ Solid {
 }
 Solid {
   translation -3.1399 6.4 0.319899
-  rotation 0.5773499358549823 0.5773489358550934 0.5773519358547601 2.0944
+  rotation -3.675499999987874e-08 -2.568509999991526e-06 0.9999999999967009 3.14159
   children [
     CadShape {
       url [
@@ -310,7 +310,7 @@ Solid {
 }
 Solid {
   translation -9.5199 6.40004 0.319899
-  rotation 0.5773499358549823 0.5773489358550934 0.5773519358547601 2.0944
+  rotation -2.531759999983294e-06 2.605269999982809e-06 -0.9999999999934015 -1.5707953071795862
   children [
     CadShape {
       url [
@@ -1116,18 +1116,76 @@ Solid {
   name "gentle_fill"
 }
 Solid {
-  translation -6.16 8.78 1.56
-  name "door"
+  translation -4.49 2.71 2.12
+  name "square_column"
 }
 Solid {
-  translation -4.53 2.7 1.56
-  name "column"
-}
-Solid {
-  translation -1.57 0.08 2.33
+  translation -1.58 0.0899999 2.39
+  rotation 0 0 1 1.5708
   name "window"
 }
 Solid {
-  translation -7.6 0.08 2.33
-  name "window2"
+  translation -19.6 0.089936 2.37
+  rotation 0 0 1 1.5708
+  name "window(1)"
+}
+Solid {
+  translation -25.58 0.099915 2.35
+  rotation 0 0 1 1.5708
+  name "window(3)"
+}
+Solid {
+  translation -22.57 12.0799 1.65
+  rotation 0 0 1 1.5708
+  name "round_column"
+}
+Solid {
+  translation -16.58 12.0799 1.65
+  rotation 0 0 1 1.5708
+  name "round_column(3)"
+}
+Solid {
+  translation -10.59 12.0799 1.65
+  rotation 0 0 1 1.5708
+  name "round_column(4)"
+}
+Solid {
+  translation -4.57 12.0799 1.65
+  rotation 0 0 1 1.5708
+  name "round_column(6)"
+}
+Solid {
+  translation 0.03 12.0799 1.65
+  rotation 0 0 1 1.5708
+  name "round_column(8)"
+}
+Solid {
+  translation -22.58 9.5799 1.65
+  rotation 0 0 1 1.5708
+  name "round_column(1)"
+}
+Solid {
+  translation -16.58 9.5799 1.65
+  rotation 0 0 1 1.5708
+  name "round_column(2)"
+}
+Solid {
+  translation -4.59 9.57995 1.65
+  rotation 0 0 1 1.5708
+  name "round_column(5)"
+}
+Solid {
+  translation 0.02 9.57995 1.65
+  rotation 0 0 1 1.5708
+  name "round_column(7)"
+}
+Solid {
+  translation -7.59 0.0899785 2.37
+  rotation 0 0 1 1.5708
+  name "window(2)"
+}
+Solid {
+  translation -7.59 0.0899785 2.37
+  rotation 0 0 1 1.5708
+  name "window(4)"
 }

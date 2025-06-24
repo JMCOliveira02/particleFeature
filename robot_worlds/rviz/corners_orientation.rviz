@@ -8,7 +8,6 @@ Panels:
         - /Status1
         - /Map1
         - /Particles1
-        - /Estimated Pose1
       Splitter Ratio: 0.5
     Tree Height: 707
   - Class: rviz_common/Selection
@@ -92,6 +91,8 @@ Visualization Manager:
           Value: true
         odom:
           Value: true
+        sensor_frame:
+          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: true
@@ -101,6 +102,8 @@ Visualization Manager:
         map:
           base_footprint_real:
             lidar2D:
+              {}
+            sensor_frame:
               {}
           estimated_pose:
             {}
@@ -156,18 +159,6 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /estimated_pose
       Value: true
-    - Class: rviz_default_plugins/MarkerArray
-      Enabled: true
-      Name: MarkerArray
-      Namespaces:
-        {}
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /feature/markers
-      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -200,6 +191,18 @@ Visualization Manager:
         Value: /rbgd_cloud
       Use Fixed Frame: true
       Use rainbow: true
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: MarkerArray
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /detected_feature_markers
       Value: true
   Enabled: true
   Global Options:

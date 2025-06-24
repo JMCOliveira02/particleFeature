@@ -1,13 +1,12 @@
-# Blender 4.2.2 LTS MTL File: 'Table.blend'
+# Blender 4.4.3 MTL File: 'None'
 # www.blender.org
 
-newmtl Material__29
-#Ns 10.000000         # Specular exponent: low shininess for wood
-#Ka 0.200000 0.150000 0.100000  # Ambient color: dark wood tone
-#Kd 0.650000 0.450000 0.250000  # Diffuse color: medium wood brown
-#Ks 0.100000 0.080000 0.050000  # Specular color: subtle wood shine
-#Ke 0.000000 0.000000 0.000000  # Emissive: no glow
-#Ni 1.000000          # Refractive index: 1.0 = no refraction
-#d 1.000000           # Transparency: fully opaque
-#illum 2              # Illumination model: 2 = ambient + diffuse + specular
-Kd 1.0 0.0 0.0  # Red
+newmtl Material__29.001
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Kd 1.000000 0.000000 0.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
