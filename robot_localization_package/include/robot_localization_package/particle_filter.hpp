@@ -226,12 +226,15 @@ private:
 
     // Feature handling
     void storeMapMessage(const robot_msgs::msg::FeatureArray::SharedPtr msg);
-    std::vector<map_features::Feature> getExpectedFeatures(const Particle &p, const std::string &type);
+    std::vector<map_features::Feature> getExpectedFeatures(const Particle &p, double delta_scan_x, double delta_scan_y, double delta_scan_theta, const std::string &type);
     double transformAngleToParticleFrame(double feature_theta_map, double particle_theta);
     double computeAngleLikelihood(double measured_angle, double expected_angle, double sigma);
     DecodedMsg decodeMsg(const robot_msgs::msg::Feature &msg);
 
-    double computeLikelihoodFeature(const Particle &p, double noisy_x, double noisy_y, double measured_theta, double sigma_pos, double sigma_theta, const std::string &type);
+    double computeLikelihoodFeature(
+        const Particle &p, 
+        double delta_scan_x, double delta_scan_y, double delta_scan_theta, 
+        double noisy_x, double noisy_y, double measured_theta, double sigma_pos, double sigma_theta, const std::string &type);
 
     // Color weight functions
     std::vector<double> colorFromWeight(double weight) const;

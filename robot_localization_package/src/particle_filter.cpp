@@ -453,12 +453,22 @@ void ParticleFilter::storeMapMessage(const robot_msgs::msg::FeatureArray::Shared
     }
 }
 
-std::vector<map_features::Feature> ParticleFilter::getExpectedFeatures(const Particle &p, const std::string &type)
+std::vector<map_features::Feature> ParticleFilter::getExpectedFeatures(const Particle &p, double delta_scan_x, double delta_scan_y, double delta_scan_theta, const std::string &type)
 {
     std::vector<map_features::Feature> features_particle;
 
-    double cos_theta = std::cos(p.theta);
-    double sin_theta = std::sin(p.theta);
+    double scan_p_x = p.x - delta_scan_x;
+    double scan_p_y = p.y - delta_scan_y;
+    double scan_p_theta = p.theta - delta_scan_theta;
+    if (scan_p_theta < -M_PI)
+        scan_p_theta += 2 * M_PI;
+    else if (scan_p_theta > M_PI)
+        scan_p_theta -= 2 * M_PI;
+
+
+
+    double cos_theta = std::cos(scan_p_theta);
+    double sin_theta = std::sin(scan_p_theta);
 
     for (const auto &feature_ptr : global_features_)
     {
@@ -472,8 +482,8 @@ std::vector<map_features::Feature> ParticleFilter::getExpectedFeatures(const Par
             double map_y = object_ptr->y;
             double feature_theta = object_ptr->theta;
 
-            double particle_x = cos_theta * (map_x - p.x) + sin_theta * (map_y - p.y);
-            double particle_y = -sin_theta * (map_x - p.x) + cos_theta * (map_y - p.y);
+            double particle_x = cos_theta * (map_x - scan_p_x) + sin_theta * (map_y - scan_p_y);
+            double particle_y = -sin_theta * (map_x - scan_p_x) + cos_theta * (map_y - scan_p_y);
 
             features_particle.emplace_back(particle_x, particle_y, feature_theta, type);
         }
@@ -534,9 +544,9 @@ double ParticleFilter::computeAngleLikelihood(double measured_angle, double expe
 }
 
 // compute the likelihood of a corner feature based on distance and angle
-double ParticleFilter::computeLikelihoodFeature(const Particle &p, double noisy_x, double noisy_y, double measured_theta, double sigma_pos, double sigma_theta, const std::string &type)
+double ParticleFilter::computeLikelihoodFeature(const Particle &p, double delta_scan_x, double delta_scan_y, double delta_scan_theta, double noisy_x, double noisy_y, double measured_theta, double sigma_pos, double sigma_theta, const std::string &type)
 {
-    std::vector<map_features::Feature> expected_features = getExpectedFeatures(p, type);
+    std::vector<map_features::Feature> expected_features = getExpectedFeatures(p,delta_scan_x, delta_scan_y, delta_scan_theta, type);
 
     double min_dist = std::numeric_limits<double>::max();
     map_features::Feature best_feature(0, 0, 0, type);
@@ -554,7 +564,13 @@ double ParticleFilter::computeLikelihoodFeature(const Particle &p, double noisy_
     }
 
     // Compute likelihood based on distance and angle
-    double expected_feature_angle = transformAngleToParticleFrame(best_feature.theta, p.theta);
+    double scan_p_theta = p.theta - delta_scan_theta;
+    if (scan_p_theta < -M_PI)
+        scan_p_theta += 2 * M_PI;
+    else if (scan_p_theta > M_PI)
+        scan_p_theta -= 2 * M_PI;
+
+    double expected_feature_angle = transformAngleToParticleFrame(best_feature.theta, scan_p_theta);
     double angle_likelihood = computeAngleLikelihood(measured_theta, expected_feature_angle, sigma_theta);
     double distance_likelihood = std::exp(-(min_dist * min_dist) / (sigma_pos * sigma_pos));
 
@@ -761,10 +777,12 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
 
     rclcpp::Time scan_timestamp = msg->header.stamp;
 
-    geometry_msgs::msg::TransformStamped tf;
+    geometry_msgs::msg::TransformStamped scan_tf;
+
+    double scan_pose_x, scan_pose_y, scan_pose_theta;
 
     try {
-        tf = tf_buffer_->lookupTransform(
+        scan_tf = tf_buffer_->lookupTransform(
             "odom",              // target frame
             "base_footprint",    // source frame
             scan_timestamp,                   // timestamp
@@ -772,18 +790,28 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
         );
 
         // Convert to PoseStamped
-        double scan_pose_x, scan_pose_y, scan_pose_theta;
 
-        scan_pose_x = tf.transform.translation.x;
-        scan_pose_y = tf.transform.translation.y;
-        scan_pose_theta = tf2::getYaw(tf.transform.rotation);
+        scan_pose_x = scan_tf.transform.translation.x;
+        scan_pose_y = scan_tf.transform.translation.y;
+        scan_pose_theta = tf2::getYaw(scan_tf.transform.rotation);
 
 
         // Now pose contains the pose of base_footprint in odom frame at time x
-        } catch (const tf2::TransformException & ex) {
+    } catch (const tf2::TransformException & ex) {
+        scan_pose_x = odom_x;
+        scan_pose_y = odom_y;
+        scan_pose_theta = odom_theta;
         RCLCPP_WARN(this->get_logger(), "Transform failed: %s", ex.what());
     }
 
+    double delta_scan_x, delta_scan_y, delta_scan_theta;
+    delta_scan_x = odom_x - scan_pose_x;
+    delta_scan_y = odom_y - scan_pose_y;
+    delta_scan_theta = odom_theta - scan_pose_theta;
+    if (delta_scan_theta < -M_PI)
+        delta_scan_theta += 2 * M_PI;
+    else if (delta_scan_theta > M_PI)
+        delta_scan_theta -= 2 * M_PI;
 
     for(auto &p : particles_)
     {
@@ -800,7 +828,7 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
 
             // Compute likelihood based on feature type
 
-            likelihood += computeLikelihoodFeature(p, obs.x, obs.y, obs.theta, sigma_pos, sigma_theta, obs.type);
+            likelihood += computeLikelihoodFeature(p, delta_scan_x, delta_scan_y, delta_scan_theta, obs.x, obs.y, obs.theta, sigma_pos, sigma_theta, obs.type);
         }
 
         p.weight *= likelihood;
