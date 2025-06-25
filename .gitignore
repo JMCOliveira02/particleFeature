@@ -8,6 +8,7 @@
 !robot_msgs/**
 !robot_worlds/
 !robot_worlds/**
+!nav2_amcl
 !.vscode/
 !README.md
 !LICENSE

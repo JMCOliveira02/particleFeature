@@ -14,6 +14,8 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Feature.msg"
   "msg/FeatureArray.msg"
+  "msg/FeaturePolar.msg"
+  "msg/FeaturePolarArray.msg"
   "msg/Results.msg"
   DEPENDENCIES geometry_msgs
 )

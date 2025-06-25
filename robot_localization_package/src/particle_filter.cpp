@@ -723,7 +723,8 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
             bool penalize = !isParticleInFreeSpace(p.x, p.y, pgm, resolution, origin);
             if (penalize)
             {
-                initializeParticle(p, p.weight);
+                //initializeParticle(p, p.weight);
+                p.weight = init_weight;
             }
         }
         

@@ -24,9 +24,9 @@ void RobotController::init(
   right_encoder = wb_robot_get_device("right wheel encoder");
   left_encoder = wb_robot_get_device("left wheel encoder");
 
-  lidar2D = wb_robot_get_device("lidar2D");
-  wb_lidar_enable(lidar2D, TIME_STEP);
-  wb_lidar_enable_point_cloud(lidar2D);
+  //lidar2D = wb_robot_get_device("lidar2D");
+  //wb_lidar_enable(lidar2D, TIME_STEP);
+  //wb_lidar_enable_point_cloud(lidar2D);
 
   wb_position_sensor_enable(right_encoder, TIME_STEP);
   wb_position_sensor_enable(left_encoder, TIME_STEP);
