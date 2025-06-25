@@ -43,15 +43,6 @@ def generate_launch_description():
         output="screen"
     )
 
-    # Map server and lifecycle manager
-    map_server = Node(
-        package="nav2_map_server",
-        executable="map_server",
-        name="map_server",
-        parameters=[{"yaml_filename": map_yaml_path}],
-        output="screen"
-    )
-
     lifecycle_manager = Node(
         package="nav2_lifecycle_manager",
         executable="lifecycle_manager",
@@ -72,14 +63,14 @@ def generate_launch_description():
         package="tf2_ros",
         executable="static_transform_publisher",
         name="base_to_lidar_broadcaster",
-        arguments=["0", "0", "0", "0", "0", "0", "base_link", "lidar2D"]
+        arguments=["0", "0", "0", "0", "0", "0", "base_footprint", "lidar2D"]
     )
 
     tf_base_to_lidar3D = Node(
         package="tf2_ros",
         executable="static_transform_publisher",
         name="base_to_lidar_broadcaster",
-        arguments=["0", "0", "0", "0", "0", "0", "base_link", "lidar3D"]
+        arguments=["0", "0", "0", "0", "0", "0", "base_footprint", "lidar3D"]
     )
 
     # RViz
@@ -106,11 +97,9 @@ def generate_launch_description():
         robot_controller,
         fake_detector,
         #particle_filter,
-        tf_map_to_odom,
+        #tf_map_to_odom,
         tf_base_to_lidar2D,
         tf_base_to_lidar3D,
-        map_server,
-        lifecycle_manager,
         teleop,
         launch.actions.RegisterEventHandler(
             event_handler=launch.event_handlers.OnProcessExit(
