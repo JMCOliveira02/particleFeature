@@ -161,6 +161,8 @@ private:
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
     rclcpp::TimerBase::SharedPtr timer_pose_;
     std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+    std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+    std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
 
     // Last received messages
     robot_msgs::msg::FeatureArray::SharedPtr last_map_msg_;

@@ -1,4 +1,5 @@
 #include "robot_localization_package/particle_filter.hpp"
+#include "tf2/utils.h"
 
 struct PGMImage2
 {
@@ -78,6 +79,11 @@ ParticleFilter::ParticleFilter() : Node("particle_filter"),
 {
     std::cout << "ParticleFilter Constructor START" << std::endl;
     RCLCPP_INFO(this->get_logger(), "Initializing particle filter node.");
+
+    tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
+
+    // Initialize the listener to populate the buffer
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
     // Load parameters from the parameter file
     loadParameters();
@@ -724,7 +730,7 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
             if (penalize)
             {
                 //initializeParticle(p, p.weight);
-                p.weight = init_weight;
+                p.weight = p.weight / 4;
             }
         }
         
@@ -744,6 +750,7 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
     }
 }
 
+
 void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::SharedPtr msg)
 {
     if (particles_.empty())
@@ -752,7 +759,33 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
         return;
     }
 
-    for (auto &p : particles_)
+    rclcpp::Time scan_timestamp = msg->header.stamp;
+
+    geometry_msgs::msg::TransformStamped tf;
+
+    try {
+        tf = tf_buffer_->lookupTransform(
+            "odom",              // target frame
+            "base_footprint",    // source frame
+            scan_timestamp,                   // timestamp
+            rclcpp::Duration::from_seconds(0.1)  // timeout
+        );
+
+        // Convert to PoseStamped
+        double scan_pose_x, scan_pose_y, scan_pose_theta;
+
+        scan_pose_x = tf.transform.translation.x;
+        scan_pose_y = tf.transform.translation.y;
+        scan_pose_theta = tf2::getYaw(tf.transform.rotation);
+
+
+        // Now pose contains the pose of base_footprint in odom frame at time x
+        } catch (const tf2::TransformException & ex) {
+        RCLCPP_WARN(this->get_logger(), "Transform failed: %s", ex.what());
+    }
+
+
+    for(auto &p : particles_)
     {
         double likelihood = 0;
 

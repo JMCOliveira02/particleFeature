@@ -794,7 +794,138 @@ void AmclNode::featureReceived(
   x = msg;
   RCLCPP_INFO(get_logger(), "Feature received!");
   if (!active_) {return;}
+
+
 }
+
+/* void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
+{
+    //RCLCPP_INFO(this->get_logger(), "Motion!");
+    if (particles_.empty())
+    {
+        RCLCPP_WARN(this->get_logger(), "No particles to update.");
+        return;
+    }
+
+
+    msg_odom_base_link_ = msg;
+
+    odom_x = msg->pose.pose.position.x;
+    odom_y = msg->pose.pose.position.y;
+
+    tf2::Quaternion odom_q(
+        msg->pose.pose.orientation.x,
+        msg->pose.pose.orientation.y,
+        msg->pose.pose.orientation.z,
+        msg->pose.pose.orientation.w);
+
+    double roll, pitch;
+    tf2::Matrix3x3(odom_q).getRPY(roll, pitch, odom_theta);
+
+    double delta_x_odom = odom_x - last_odom_x_;
+    double delta_y_odom = odom_y - last_odom_y_;
+    double delta_distance = std::hypot(delta_x_odom, delta_y_odom);
+
+    std::uniform_real_distribution<double> noise_x(-motion_x_variance_, motion_x_variance_);
+    std::uniform_real_distribution<double> noise_y(-motion_y_variance_, motion_y_variance_);
+    std::uniform_real_distribution<double> noise_theta(-motion_angle_variance_, motion_angle_variance_);
+
+    double alpha_odom = atan2(delta_y_odom, delta_x_odom);
+    double alpha_robot = alpha_odom - last_odom_theta_;
+    double delta_x_robot = delta_distance * std::cos(alpha_robot);
+    double delta_y_robot = delta_distance * std::sin(alpha_robot);
+
+    double delta_theta_odom = odom_theta - last_odom_theta_;
+
+    // update particles if significant motion is detected
+    if (delta_distance > motion_delta_distance_ || std::abs(delta_theta_odom) > motion_delta_angle_)
+    {
+        //RCLCPP_INFO(this->get_logger(), "Motion Update!");
+        for (auto &p : particles_)
+        {
+            p.x += delta_x_robot * std::cos(p.theta) - delta_y_robot * std::sin(p.theta) + noise_x(generator_);
+            p.y += delta_x_robot * std::sin(p.theta) + delta_y_robot * std::cos(p.theta) + noise_y(generator_);
+            p.theta += delta_theta_odom + noise_theta(generator_);
+
+            if (p.theta > M_PI)
+                p.theta -= 2 * M_PI;
+            if (p.theta < -M_PI)
+                p.theta += 2 * M_PI;
+
+            bool penalize = !isParticleInFreeSpace(p.x, p.y, pgm, resolution, origin);
+            if (penalize)
+            {
+                //initializeParticle(p, p.weight);
+                p.weight = init_weight;
+            }
+        }
+        
+        //RCLCPP_INFO(this->get_logger(), "Motion Update after particles!");
+
+        last_odom_x_ = odom_x;
+        last_odom_y_ = odom_y;
+        last_odom_theta_ = odom_theta;
+
+    }
+
+    if(with_color_){
+        publishParticles_with_color();
+    }   
+    else{
+        publishParticles_no_color();
+    }
+}
+
+void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::SharedPtr msg)
+{
+    if (particles_.empty())
+    {
+        RCLCPP_WARN(this->get_logger(), "No particles to update.");
+        return;
+    }
+
+    for (auto &p : particles_)
+    {
+        double likelihood = 0;
+
+        for (const auto &obs_msg : msg->features)
+        {
+            DecodedMsg obs = decodeMsg(obs_msg);
+
+            double sigma_x = std::sqrt(obs.covariance_pos[0][0]);
+            double sigma_y = std::sqrt(obs.covariance_pos[1][1]);
+            double sigma_theta = std::sqrt(obs.angle_variance);
+            double sigma_pos = std::sqrt((sigma_x * sigma_x + sigma_y * sigma_y));
+
+            // Compute likelihood based on feature type
+
+            likelihood += computeLikelihoodFeature(p, obs.x, obs.y, obs.theta, sigma_pos, sigma_theta, obs.type);
+        }
+
+        p.weight *= likelihood;
+
+    }
+
+    RCLCPP_INFO(this->get_logger(), "Measurement before normalize!");
+    normalizeWeights();
+
+    // perform resampling
+    //RCLCPP_INFO(this->get_logger(), "Measurement before resample!");
+    resampleParticles(ResamplingAmount::ESS, ResamplingMethod::RESIDUAL);
+    //RCLCPP_INFO(this->get_logger(), "Measurement after resample!");
+
+
+    // Replace worst particles if resampling flag is not set
+    if (!resample_flag_)
+    {
+        // replaceWorstParticles(replace_worst_percentage_);
+        replaceWorstParticles_pgm(replace_worst_percentage_);
+    }
+    else
+    {
+        resample_flag_ = false;
+    }
+} */
 
 bool AmclNode::shouldUpdateFilter(const pf_vector_t pose, pf_vector_t & delta)
 {
