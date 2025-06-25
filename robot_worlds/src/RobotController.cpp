@@ -25,26 +25,49 @@ namespace robot_controller
     right_encoder = wb_robot_get_device("right wheel encoder");
     left_encoder = wb_robot_get_device("left wheel encoder");
 
-    lidar2D = wb_robot_get_device("lidar2D");
-    wb_lidar_enable(lidar2D, TIME_STEP);
-    wb_lidar_enable_point_cloud(lidar2D);
+    //lidar2D = wb_robot_get_device("lidar2D");
+    //wb_lidar_enable(lidar2D, TIME_STEP);
+    //wb_lidar_enable_point_cloud(lidar2D);
 
     wb_position_sensor_enable(right_encoder, TIME_STEP);
     wb_position_sensor_enable(left_encoder, TIME_STEP);
 
-    wb_motor_set_position(left_motor, INFINITY);
-    wb_motor_set_velocity(left_motor, 0.0);
+ 
+  wb_motor_set_position(left_motor, INFINITY);
+  wb_motor_set_velocity(left_motor, 0.0);
 
-    wb_motor_set_position(right_motor, INFINITY);
-    wb_motor_set_velocity(right_motor, 0.0);
+  wb_motor_set_position(right_motor, INFINITY);
+  wb_motor_set_velocity(right_motor, 0.0);
 
-    cmd_vel_subscription_ = node->create_subscription<geometry_msgs::msg::Twist>(
-        "/cmd_vel", rclcpp::SensorDataQoS().reliable(),
-        [this](const geometry_msgs::msg::Twist::SharedPtr msg)
-        {
-          this->cmd_vel_msg.linear = msg->linear;
-          this->cmd_vel_msg.angular = msg->angular;
-        });
+
+  cmd_vel_subscription_ = node->create_subscription<geometry_msgs::msg::Twist>(
+      "/cmd_vel", rclcpp::SensorDataQoS().reliable(),
+      [this](const geometry_msgs::msg::Twist::SharedPtr msg){
+        this->cmd_vel_msg.linear = msg->linear;
+        this->cmd_vel_msg.angular = msg->angular;
+      }
+  ); 
+
+  set_position_confirmation_ = node->create_publisher<std_msgs::msg::Int64>(
+      "/set_position_confirmation", rclcpp::QoS(10));
+
+  set_position_subscription_ = node->create_subscription<geometry_msgs::msg::PoseStamped>(
+      "/set_position", rclcpp::QoS(10),
+      [this](const geometry_msgs::msg::PoseStamped::SharedPtr msg){
+        RCLCPP_INFO(node_->get_logger(), "Received set_position command");
+        double position[3] = {msg->pose.position.x, msg->pose.position.y, msg->pose.position.z};
+        double orientation[4] = {msg->pose.orientation.x, msg->pose.orientation.y, msg->pose.orientation.z, msg->pose.orientation.w};
+        WbFieldRef translation_field = wb_supervisor_node_get_field(robot_node, "translation");
+        WbFieldRef rotation_field = wb_supervisor_node_get_field(robot_node, "rotation");
+        wb_supervisor_field_set_sf_vec3f(translation_field, position);
+        wb_supervisor_field_set_sf_rotation(rotation_field, orientation);
+        pcl_count++;
+        auto confirmation_msg = std_msgs::msg::Int64();
+        confirmation_msg.data = pcl_count; 
+        set_position_confirmation_->publish(confirmation_msg);
+      }
+  );
+
 
     tf_broadcaster_relative = std::make_shared<tf2_ros::TransformBroadcaster>(node);
     tf_broadcaster_real = std::make_shared<tf2_ros::TransformBroadcaster>(node);
@@ -237,8 +260,8 @@ namespace robot_controller
     wb_motor_set_velocity(left_motor, command_motor_left);
     wb_motor_set_velocity(right_motor, command_motor_right);
 
-#pragma endregion SpeedControl
-  }
+  #pragma endregion SpeedControl 
+}
 
 } // namespace robot_controller
 

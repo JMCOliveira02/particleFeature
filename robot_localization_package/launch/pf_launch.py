@@ -47,13 +47,10 @@ def generate_launch_description():
         executable='fake_detector',
         name='fake_detector',
         output='screen',
-        parameters=[
-            {"map_features": map_features_detection},
-        ]
-
+        parameters=[{"map_features": map_features_detection},]
     )
 
-    # Ransac corner Detector
+    # 2D Ransac corner Detector
     corner_detector = Node(
         package="robot_feature_detector",
         executable="corners",
@@ -81,7 +78,6 @@ def generate_launch_description():
         'config',
         'particle_filter_params.yaml'
     )
-
     particle_filter = Node(
         package='robot_localization_package',
         executable='particle_filter',
@@ -102,8 +98,6 @@ def generate_launch_description():
         parameters=[{'yaml_filename': map_yaml}],
         output='screen'
     )
-
-    # Map server lifecycle manager
     lifecycle_manager = Node(
         package='nav2_lifecycle_manager',
         executable='lifecycle_manager',
@@ -119,13 +113,17 @@ def generate_launch_description():
         name='map_to_odom_broadcaster',
         arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom']
     )
-
-    tf_base_to_lidar = Node(
+    tf_base_to_lidar_2D = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         name='base_to_lidar_broadcaster',
-        arguments=['0', '0', '0', '0', '0', '0',
-                   'base_footprint_real', 'lidar2D']
+        arguments=['0', '0', '0', '0', '0', '0', 'base_footprint_real', 'lidar2D']
+    )
+    tf_base_to_lidar_3D = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='base_to_lidar_broadcaster',
+        arguments=["0.13", "0", "0.25", "0", "0", "0", "base_footprint_real", "lidar3D"]
     )
 
     # RViz
@@ -137,7 +135,7 @@ def generate_launch_description():
         output='screen'
     )
 
-    # Teleop (optional)
+    # Teleop
     teleop = Node(
         package='teleop_twist_keyboard',
         executable='teleop_twist_keyboard',
@@ -165,7 +163,8 @@ def generate_launch_description():
         send_scan,
         recv_results,
         tf_map_to_odom,
-        tf_base_to_lidar,
+        tf_base_to_lidar_2D,
+        tf_base_to_lidar_3D,
         map_server,
         lifecycle_manager,
         teleop,

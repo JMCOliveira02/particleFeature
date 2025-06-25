@@ -10,7 +10,7 @@ from webots_ros2_driver.webots_controller import WebotsController
 def generate_launch_description():
     world_dir = get_package_share_directory('robot_worlds')
     robot_description_path = os.path.join(world_dir, 'urdf', 'robot.urdf')
-    world_setup = 'iilab_test'
+    world_setup = 'iilab'
 
     robot_controller = WebotsController(
         robot_name='robot',
@@ -41,9 +41,18 @@ def generate_launch_description():
         arguments=["0", "0", "0", "0", "0", "0", "base_footprint", "lidar2D"]
     )
 
+    tf_static_rgbd = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        name="map_to_odom_broadcaster",
+        arguments=["0", "0", "0", "0", "-0.5", "0", "base_footprint_real", "rgbd"]
+    )
+
+
 
     return LaunchDescription([
         tf_static_lidar,
+        tf_static_rgbd,
         webots,
         robot_controller,
         teleop,

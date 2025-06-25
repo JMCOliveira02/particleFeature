@@ -1,0 +1,30 @@
+newmtl Material__25 
+Kd 1.0 1.0 1.0      # Walls
+
+newmtl Material__26 
+Kd 0.7 0.7 0.7      # Beams
+
+newmtl Material__27_1 
+Kd 0.7 0.7 0.7      # Collumns
+
+newmtl Material__28 
+Kd 0.5 0.5 0.5      # Windows
+d 0.9
+
+newmtl Material__28_2 
+Kd 1.0 1.0 1.0      # Gates
+
+newmtl Material__30
+Kd 0.5 0.5 0.5      # Ceiling
+
+newmtl Material__31
+Kd 1.0 1.0 1.0      # Window frames
+
+newmtl Material__32
+Kd 0.0 1.0 0.0      #
+
+newmtl galao
+Kd 0.7 0.7 0.7      # Fooor
+
+newmtl Default_Material
+Kd 0.7 0.7 0.7      # Corridor Rectangles

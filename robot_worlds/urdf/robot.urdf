@@ -7,13 +7,19 @@
                 <alwaysOn>true</alwaysOn>
             </ros>
         </device>
+        <device reference="lidar3D" type="Lidar">
+            <ros>
+                <topicName>/scan3D</topicName>
+                <alwaysOn>true</alwaysOn>
+            </ros>
+        </device>
         <plugin type="robot_controller::RobotController" />
         <plugin type="webots_ros2_driver::Ros2RGBD">
             <camera>camera</camera>
             <rangeFinder>rangeFinder</rangeFinder>
-            <topicName>/rbgd_cloud</topicName>
+            <topicName>/rgbd_cloud</topicName>
             <alwaysOn>true</alwaysOn>
-            <frameName>lidar2D</frameName>
+            <frameName>rgbd</frameName>
         </plugin>
     </webots>
 </robot>

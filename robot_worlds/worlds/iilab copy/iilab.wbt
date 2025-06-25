@@ -1,0 +1,107 @@
+#VRML_SIM R2025a utf8
+
+WorldInfo {
+}
+Viewpoint {
+  fieldOfView 2
+  orientation -0.24850137117188884 0.024335602391247692 0.9683257958879058 1.1795277602676941
+  position -10.125461841439508 0.6903146504517627 3.8032701701801623
+  exposure 5
+  follow "robot"
+  followType "None"
+}
+DirectionalLight {
+  ambientIntensity 0.5
+  direction 0 -1 -1
+  castShadows TRUE
+}
+Solid {
+  rotation 1 0 0 1.5708
+  children [
+    Solid {
+      translation -26.35 2.09 -1.18
+      rotation -2.653589999981315e-06 -0.9999999999929585 -2.653589999981315e-06 -1.5707953071795862
+    }
+    CadShape {
+      url [
+        "objects/iilab.obj"
+      ]
+    }
+  ]
+  name "iilab"
+  boundingObject Mesh {
+    url [
+      "objects/iilab.obj"
+    ]
+  }
+}
+Solid {
+  translation 1.58 1.15 -0.5
+  children [
+    Shape {
+      appearance Appearance {
+        material Material {
+          ambientIntensity 0.5
+          diffuseColor 0.3 0.3 0.3
+          shininess 0
+        }
+      }
+      geometry Plane {
+        size 100 100
+      }
+    }
+  ]
+  name "GroundPlane"
+  boundingObject Plane {
+    size 100 100
+  }
+}
+Background {
+  skyColor [
+    0.14 0.14 0.14
+  ]
+}
+DEF ROBOT_1 Robot {
+  translation -5 11 0.396
+  rotation 1 0 0 0
+  children [
+    RangeFinder {
+      translation 0.1 0 0.3
+      rotation 0 -1 0 0.3
+      name "rangeFinder"
+      fieldOfView 2.5
+      width 500
+      height 500
+      maxRange 15
+    }
+    Camera {
+      translation 0.1 0 0.3
+      rotation 0 -1 0 0.3
+      fieldOfView 2.5
+      width 500
+      height 500
+    }
+    Lidar {
+      translation 0.00553488 0 0.159904
+      rotation 0 -1 0 -0.0346
+      name "lidar2D"
+      horizontalResolution 360
+      fieldOfView 6.282
+      verticalFieldOfView 2.5
+      numberOfLayers 1
+      maxRange 10
+    }
+    Lidar {
+      translation 0 0 0.3
+      rotation 1 0 0 0
+      name "lidar3D"
+      horizontalResolution 360
+      fieldOfView 6.282
+      verticalFieldOfView 2
+      numberOfLayers 40
+      maxRange 10
+    }
+  ]
+  controller "<extern>"
+  supervisor TRUE
+}

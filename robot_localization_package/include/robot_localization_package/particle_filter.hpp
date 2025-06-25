@@ -123,8 +123,11 @@ private:
         MAX_WEIGHT
     };
 
-    // Random number generator
-    std::default_random_engine generator_;
+    // Random number generator and distributions
+    std::random_device rd;
+    std::mt19937 generator_;
+    std::uniform_real_distribution<double> distr_theta;
+    std::uniform_int_distribution<> distr_pgm_index;
 
     // Map loader and features
     map_features::MapLoader map_loader_;
@@ -133,6 +136,7 @@ private:
     double room_size_x_, room_size_y_;
 
     // Particle filter variables
+    double init_weight;
     double num_particles_;
     std::vector<Particle> particles_;
     bool resample_flag_ = false;
@@ -144,13 +148,17 @@ private:
     double inject_percentage_;
     double replace_worst_percentage_;
     int estimate_num_particles_;
+    double odom_x, odom_y, odom_theta;
+    
 
     // Logging
     std::ofstream log_file_;
 
     // ROS2 publishers, subscribers, and timers
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_pub_;
-    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr particles_pub_;
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr particles_color_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr particles_no_color_pub_;
+
     rclcpp::Subscription<robot_msgs::msg::FeatureArray>::SharedPtr feature_sub_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
     rclcpp::TimerBase::SharedPtr timer_pose_;
@@ -176,47 +184,50 @@ private:
     int resample_cooldown_counter_;
 
     // Last estimated pose
-    double last_x_ = 0.0, last_y_ = 0.0, last_theta_ = 0.0;
+    double last_odom_x_ = 0.0, last_odom_y_ = 0.0, last_odom_theta_ = 0.0;
+    double last_update_x_ = 0.0, last_update_y_ = 0.0, last_update_theta_ = 0.0;
+
     double x_last_final = 0.0, y_last_final = 0.0, theta_last_final = 0.0;
-
+    double pose_covariance_[3] = { 0.0, 0.0, 0.0};    
+    
     // Color weight lookup
+    bool with_color_ = false;
     std::vector<std::pair<double, std::vector<double>>> ColorWeightLookup;
-
+    
     // Variables for automatic particle initialization from pgm
     PGMImage pgm;
     std::vector<std::pair<int, int>> free_pixels;
     double resolution;
     std::vector<double> origin;
-
+    
     // PGM loader
     void calculateFreeSpaceFromPGM();
-
+    
     // Initialization
+    void initializeParticle(Particle &p, double weight);
     void initializeParticles_pgm();
 
     // Particle filter steps
     void motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg);
     void measurementUpdate(const robot_msgs::msg::FeatureArray::SharedPtr msg);
     void resampleParticles(ResamplingAmount type, ResamplingMethod method);
-
+    
     // Resampling methods
-    void multinomialResample();
-    void stratifiedResample();
-    void systematicResample();
     void residualResample();
-
+    
     // Particle management
     void normalizeWeights();
     double maxWeight();
     void replaceWorstParticles_pgm(double percentage);
     void injectRandomParticles_pgm(double percentage);
-
+    
     // Pose estimation
     void computeEstimatedPose();
     void publishEstimatedPose();
-
-    // Particle handling
-    void publishParticles();
+    
+    // Particle visualization
+    void publishParticles_with_color();
+    void publishParticles_no_color();
 
     // Feature handling
     void storeMapMessage(const robot_msgs::msg::FeatureArray::SharedPtr msg);

@@ -73,14 +73,24 @@ bool isParticleInFreeSpace(double x_world, double y_world, const PGMImage &pgm, 
 }
 
 ParticleFilter::ParticleFilter() : Node("particle_filter"),
-                                   last_x_(0.0), last_y_(0.0), last_theta_(0.0), iterationCounter(0.0), first_update_(true),
-                                   msg_odom_base_link_(nullptr), last_map_msg_(nullptr)
+                                    iterationCounter(0.0),
+                                    msg_odom_base_link_(nullptr), last_map_msg_(nullptr)
 {
     std::cout << "ParticleFilter Constructor START" << std::endl;
     RCLCPP_INFO(this->get_logger(), "Initializing particle filter node.");
 
     // Load parameters from the parameter file
     loadParameters();
+
+    // Load PGM and calculate free space
+    calculateFreeSpaceFromPGM();
+     
+    // Initialize some variables
+    init_weight = 1.0 / num_particles_;
+
+    distr_theta = std::uniform_real_distribution<double>(-M_PI, M_PI);
+    distr_pgm_index = std::uniform_int_distribution<>(0, free_pixels.size() - 1);
+    generator_ = std::mt19937(rd());
 
     // Retrieve the map_features parameter passed from the launch file
 
@@ -107,7 +117,8 @@ ParticleFilter::ParticleFilter() : Node("particle_filter"),
 
     // Create publishers for the estimated pose and particles
     pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/estimated_pose", 10);
-    particles_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/particles", 10);
+    particles_color_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/particles_color", 10);
+    particles_no_color_pub_ = this->create_publisher<geometry_msgs::msg::PoseArray>("/particles_no_color", 10);
 
     // Create a transform broadcaster
     tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
@@ -117,9 +128,6 @@ ParticleFilter::ParticleFilter() : Node("particle_filter"),
 
     // Initialize the color pallete for the particles weights
     computeColorWeightLookup();
-
-    // Load PGM and calculate free space
-    calculateFreeSpaceFromPGM();
 
     // Initialize the particles
     initializeParticles_pgm();
@@ -292,7 +300,7 @@ std::vector<double> ParticleFilter::colorFromWeight(double weight) const
 }
 
 // publish the particles for visualization as markers
-void ParticleFilter::publishParticles()
+void ParticleFilter::publishParticles_with_color()
 {
     if (particles_.empty())
         return;
@@ -316,10 +324,7 @@ void ParticleFilter::publishParticles()
 
         tf2::Quaternion q;
         q.setRPY(0, 0, p.theta);
-        marker.pose.orientation.x = q.x();
-        marker.pose.orientation.y = q.y();
-        marker.pose.orientation.z = q.z();
-        marker.pose.orientation.w = q.w();
+        marker.pose.orientation = tf2::toMsg(q);
 
         marker.scale.x = 0.07;
         marker.scale.y = 0.005;
@@ -334,7 +339,33 @@ void ParticleFilter::publishParticles()
         marker_array.markers.push_back(marker);
     }
 
-    particles_pub_->publish(marker_array);
+    particles_color_pub_->publish(marker_array);
+}
+
+void ParticleFilter::publishParticles_no_color()
+{
+    if (particles_.empty())
+        return;
+
+    geometry_msgs::msg::PoseArray pose_array;
+
+    pose_array.header.frame_id = "map";
+    pose_array.header.stamp = this->get_clock()->now();
+    
+    for (const auto &p : particles_)
+    {
+        geometry_msgs::msg::Pose pose;
+        pose.position.x = p.x;
+        pose.position.y = p.y;
+        pose.position.z = 0.0;
+    
+        tf2::Quaternion q;
+        q.setRPY(0, 0, p.theta);
+        pose.orientation = tf2::toMsg(q);
+    
+        pose_array.poses.push_back(pose);
+    }
+    particles_no_color_pub_->publish(pose_array);
 }
 
 // replace the worst particles with random ones in white part of pgm (free space)
@@ -346,23 +377,14 @@ void ParticleFilter::replaceWorstParticles_pgm(double percentage)
 
     int num_replace = static_cast<int>(num_particles_ * percentage);
 
-    // Sample random particles
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> index_dist(0, free_pixels.size() - 1);
-
-    std::uniform_real_distribution<double> dist_theta(-M_PI, M_PI);
-
-    double init_weight = 1.0 / num_particles_;
-
     for (int i = 0; i < num_replace; i++)
     {
-        auto [x_pix, y_pix] = free_pixels[index_dist(gen)];
+        auto [x_pix, y_pix] = free_pixels[distr_pgm_index(generator_)];
         auto [x, y] = pixelToWorld(x_pix, y_pix, resolution, origin, pgm.height);
 
         particles_[i].x = x;
         particles_[i].y = y;
-        particles_[i].theta = dist_theta(generator_);
+        particles_[i].theta = distr_theta(generator_);
         particles_[i].weight = init_weight;
     }
 
@@ -372,12 +394,6 @@ void ParticleFilter::replaceWorstParticles_pgm(double percentage)
 // replace and inject random particles into the filter in white part of pgm (free space)
 void ParticleFilter::injectRandomParticles_pgm(double percentage)
 {
-    // replace random particles
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> index_dist(0, free_pixels.size() - 1);
-
-    std::uniform_real_distribution<double> dist_theta(-M_PI, M_PI);
 
     int num_replace = static_cast<int>(num_particles_ * percentage);
 
@@ -387,16 +403,14 @@ void ParticleFilter::injectRandomParticles_pgm(double percentage)
         index = rand() % static_cast<int>(num_particles_);
     }
 
-    double init_weight = 1.0 / num_particles_;
-
     for (int i : random_indices)
     {
-        auto [x_pix, y_pix] = free_pixels[index_dist(gen)];
+        auto [x_pix, y_pix] = free_pixels[distr_pgm_index(generator_)];
         auto [x, y] = pixelToWorld(x_pix, y_pix, resolution, origin, pgm.height);
 
         particles_[i].x = x;
         particles_[i].y = y;
-        particles_[i].theta = dist_theta(generator_);
+        particles_[i].theta = distr_theta(generator_);
         particles_[i].weight = init_weight;
     }
 }
@@ -503,10 +517,6 @@ double ParticleFilter::computeAngleLikelihood(double measured_angle, double expe
         measured_angle -= 2 * M_PI;
     if (measured_angle < -M_PI)
         measured_angle += 2 * M_PI;
-    if (expected_angle > M_PI)
-        expected_angle -= 2 * M_PI;
-    if (expected_angle < -M_PI)
-        expected_angle += 2 * M_PI;
 
     double error = measured_angle - expected_angle;
 
@@ -516,7 +526,7 @@ double ParticleFilter::computeAngleLikelihood(double measured_angle, double expe
         error += 2 * M_PI;
 
     // double coeff = 1.0 / std::sqrt(2.0 * M_PI * sigma * sigma);
-    double exponent = -0.5 * (error * error) / (sigma * sigma);
+    double exponent = -0.5 * (error * error) / (10 * sigma * sigma);
 
     return std::exp(exponent);
 }
@@ -601,91 +611,6 @@ ParticleFilter::DecodedMsg ParticleFilter::decodeMsg(const robot_msgs::msg::Feat
 
 #pragma region resampling functions
 
-void ParticleFilter::multinomialResample()
-{
-    std::vector<Particle> new_particles;
-    new_particles.reserve(num_particles_);
-
-    std::vector<double> cumulative_weights(num_particles_);
-    cumulative_weights[0] = particles_[0].weight;
-    for (size_t i = 1; i < num_particles_; i++)
-    {
-        cumulative_weights[i] = cumulative_weights[i - 1] + particles_[i].weight;
-    }
-
-    std::uniform_real_distribution<double> dist(0.0, cumulative_weights.back());
-    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-    generator_.seed(seed);
-
-    for (size_t i = 0; i < num_particles_; i++)
-    {
-        double r = dist(generator_);
-        auto it = std::lower_bound(cumulative_weights.begin(), cumulative_weights.end(), r);
-        int index = std::distance(cumulative_weights.begin(), it);
-        new_particles.push_back(particles_[index]);
-    }
-
-    particles_ = new_particles;
-}
-
-void ParticleFilter::stratifiedResample()
-{
-    std::vector<Particle> new_particles;
-    new_particles.reserve(num_particles_);
-
-    std::vector<double> cumulative_weights(num_particles_);
-    cumulative_weights[0] = particles_[0].weight;
-    for (size_t i = 1; i < num_particles_; i++)
-    {
-        cumulative_weights[i] = cumulative_weights[i - 1] + particles_[i].weight;
-    }
-
-    std::uniform_real_distribution<double> dist(0.0, 1.0 / num_particles_);
-    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-    generator_.seed(seed);
-
-    int index = 0;
-    for (size_t i = 0; i < num_particles_; i++)
-    {
-        double r = dist(generator_); // Generate new random variable for each particle
-        double U = r + (i / static_cast<double>(num_particles_));
-        while (U > cumulative_weights[index])
-            index++;
-        new_particles.push_back(particles_[index]);
-    }
-
-    particles_ = new_particles;
-}
-
-void ParticleFilter::systematicResample()
-{
-    std::vector<Particle> new_particles;
-    new_particles.reserve(num_particles_);
-
-    // Compute cumulative weights
-    std::vector<double> cumulative_weights(num_particles_);
-    cumulative_weights[0] = particles_[0].weight;
-    for (size_t i = 1; i < num_particles_; i++)
-    {
-        cumulative_weights[i] = cumulative_weights[i - 1] + particles_[i].weight;
-    }
-
-    std::uniform_real_distribution<double> dist(0.0, 1.0 / num_particles_);
-    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-    generator_.seed(seed);
-    double r = dist(generator_);
-    int index = 0;
-    for (size_t i = 0; i < num_particles_; i++)
-    {
-        double U = r + (i / static_cast<double>(num_particles_));
-        while (U > cumulative_weights[index])
-            index++;
-        new_particles.push_back(particles_[index]);
-    }
-
-    particles_ = new_particles;
-}
-
 void ParticleFilter::residualResample()
 {
     std::vector<Particle> new_particles;
@@ -712,8 +637,7 @@ void ParticleFilter::residualResample()
     }
 
     std::uniform_real_distribution<double> dist(0.0, sum_residuals);
-    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-    generator_.seed(seed);
+
     while (total_copies < num_particles_)
     {
         double r = dist(generator_);
@@ -738,51 +662,24 @@ void ParticleFilter::residualResample()
 //! Particle Filter Functions !//
 #pragma region pf functions
 
+void ParticleFilter::initializeParticle(Particle &p, double weight)
+{
+    auto [x_pix, y_pix] = free_pixels[distr_pgm_index(generator_)];
+    auto [x, y] = pixelToWorld(x_pix, y_pix, resolution, origin, pgm.height);
+    p.x = x;
+    p.y = y;
+    p.theta = distr_theta(generator_);
+    p.weight = weight;
+}
+
 void ParticleFilter::initializeParticles_pgm()
 {
-    // Sample random particles
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> index_dist(0, free_pixels.size() - 1);
-    std::uniform_real_distribution<> theta_dist(-M_PI, M_PI);
-    std::uniform_real_distribution<double> dist_theta(-M_PI, M_PI);
-    double init_weight = 1.0 / num_particles_;
-
+    RCLCPP_INFO(this->get_logger(),"init weight: %.2f", init_weight );
     particles_.resize(num_particles_);
     for (auto &p : particles_)
     {
-        auto [x_pix, y_pix] = free_pixels[index_dist(gen)];
-        auto [x, y] = pixelToWorld(x_pix, y_pix, resolution, origin, pgm.height);
-
-        geometry_msgs::msg::Pose pose;
-        p.x = x;
-        p.y = y;
-        p.theta = dist_theta(generator_);
-        p.weight = init_weight;
+        initializeParticle(p, init_weight);
     }
-
-    /* while(1){
-        publishParticles();
-        rclcpp::spin_some(this->get_node_base_interface());
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    } */
-
-    /* if (free_pixels.size() < static_cast<size_t>(num_particles_)) {
-        throw std::runtime_error("Not enough free pixels");
-    } */
-
-    /* while(1){
-        publishParticles();
-        rclcpp::spin_some(this->get_node_base_interface());
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    } */
-
-    /*  for (auto &p : particles_) {
-         p.x = dist_x(generator_);
-         p.y = dist_y(generator_);
-         p.theta = dist_theta(generator_);
-         p.weight = 1.0 / num_particles_;
-     }  */
 }
 
 void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
@@ -836,6 +733,13 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
                 p.theta += 2 * M_PI;
         }
 
+        bool penalize = !isParticleInFreeSpace(p.x, p.y, pgm, resolution, origin);
+        //if (penalize)
+        //{
+            //initializeParticle(p, p.weight);
+        //    p.weight = init_weight;
+        //}
+
         last_x_ = odom_x;
         last_y_ = odom_y;
         last_theta_ = odom_theta;
@@ -849,7 +753,12 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
         measurementUpdate(last_map_msg_);
     }
 
-    publishParticles();
+    if(with_color_){
+        publishParticles_with_color();
+    }   
+    else{
+        publishParticles_no_color();
+    }
 }
 
 // FIX 2: Correct the max_element usage in measurementUpdate
@@ -1027,6 +936,7 @@ void ParticleFilter::resampleParticles(ResamplingAmount type, ResamplingMethod m
 
     resample_flag_ = true;
 
+    
     // Perform resampling based on the specified method
     switch (method)
     {
@@ -1043,7 +953,7 @@ void ParticleFilter::resampleParticles(ResamplingAmount type, ResamplingMethod m
         residualResample();
         break;
     }
-
+    
     // **IMPROVEMENT 4: Gentle weight reset with small noise for diversity**
     double base_weight = 1.0 / num_particles_;
     std::uniform_real_distribution<double> noise_dist(0.95, 1.05); // ±5% noise
@@ -1093,14 +1003,13 @@ void ParticleFilter::computeEstimatedPose()
     // Use only the top estimate_num_particles_ particles
     int num_top_particles = std::min(estimate_num_particles_, static_cast<int>(sorted_particles.size()));
 
-    double x_sum = 0, y_sum = 0, theta_sum = 0, theta_x_sum = 0, theta_y_sum = 0, weight_sum = 0;
+    double x_sum = 0, y_sum = 0, theta_x_sum = 0, theta_y_sum = 0, weight_sum = 0;
 
     for (int i = 0; i < num_top_particles; i++)
     {
         const auto &p = sorted_particles[i];
         x_sum += p.x * p.weight;
         y_sum += p.y * p.weight;
-        theta_sum += p.theta * p.weight;
         theta_x_sum += std::cos(p.theta) * p.weight;
         theta_y_sum += std::sin(p.theta) * p.weight;
         weight_sum += p.weight;
@@ -1110,7 +1019,6 @@ void ParticleFilter::computeEstimatedPose()
     {
         x_sum /= weight_sum;
         y_sum /= weight_sum;
-        theta_sum /= weight_sum;
         theta_x_sum /= weight_sum;
         theta_y_sum /= weight_sum;
     }
@@ -1124,6 +1032,38 @@ void ParticleFilter::computeEstimatedPose()
         theta_last_final -= 2 * M_PI;
     if (theta_last_final < -M_PI)
         theta_last_final += 2 * M_PI;
+
+    // --- Covariance computation ---
+    double cov_xx = 0, cov_yy = 0, cov_tt = 0;
+    double cov_xy = 0, cov_xt = 0, cov_yt = 0;
+
+    for (int i = 0; i < num_top_particles; i++)
+    {
+        const auto &p = sorted_particles[i];
+        double dx = p.x - x_last_final;
+        double dy = p.y - y_last_final;
+
+        // Wrap angle difference to [-pi, pi]
+        double dtheta = p.theta - theta_last_final;
+        while (dtheta > M_PI) dtheta -= 2 * M_PI;
+        while (dtheta < -M_PI) dtheta += 2 * M_PI;
+
+        cov_xx += p.weight * dx * dx;
+        cov_yy += p.weight * dy * dy;
+        cov_tt += p.weight * dtheta * dtheta;
+
+    }
+
+    if (weight_sum > 0)
+    {
+        cov_xx /= weight_sum;
+        cov_yy /= weight_sum;
+        cov_tt /= weight_sum;
+    }
+
+    pose_covariance_[0] = cov_xx; // Covariance of x
+    pose_covariance_[1] = cov_yy; // Covariance of y
+    pose_covariance_[2] = cov_tt; // Covariance of theta
 }
 
 // publish the estimated pose and the map to odom transform
@@ -1152,6 +1092,10 @@ void ParticleFilter::publishEstimatedPose()
     pose_msg.pose.pose.orientation.y = q.y();
     pose_msg.pose.pose.orientation.z = q.z();
     pose_msg.pose.pose.orientation.w = q.w();
+
+    pose_msg.pose.covariance[0] = pose_covariance_[0]; // Covariance of x
+    pose_msg.pose.covariance[7] = pose_covariance_[1]; // Covariance of y
+    pose_msg.pose.covariance[35] = pose_covariance_[2]; // Covariance of theta
     pose_pub_->publish(pose_msg);
 
     // Publish `map -> base_link` transform
