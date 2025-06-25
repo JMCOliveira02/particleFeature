@@ -14,8 +14,8 @@ def generate_launch_description():
 
     # Paths for robot and map
     robot_description_path = os.path.join(worlds_pkg, 'urdf', 'robot.urdf')
-    world_path = os.path.join(worlds_pkg, 'worlds', 'square_two_boxes.wbt')
-    map_yaml_path = os.path.join(worlds_pkg, 'maps', 'square_two_boxes.yaml')
+    world_path = os.path.join(worlds_pkg, 'worlds', 'iilab', 'iilab.wbt')
+    map_yaml_path = os.path.join(worlds_pkg, 'maps', 'iilab', 'iilab.yaml')
     rviz_config = os.path.join(worlds_pkg, 'rviz', 'corners_orientation.rviz')
 
     # Webots simulation + robot controller
@@ -39,6 +39,7 @@ def generate_launch_description():
         package="robot_worlds",
         executable="fake_detector",
         name="fake_detector",
+        parameters = [{"map_features": '/home/joao/ros2_ws/src/robot_worlds/feature_maps/iilab_detection.yaml'}],
         output="screen"
     )
 
@@ -67,11 +68,18 @@ def generate_launch_description():
         arguments=["0", "0", "0", "0", "0", "0", "map", "odom"]
     )
 
-    tf_base_to_lidar = Node(
+    tf_base_to_lidar2D = Node(
         package="tf2_ros",
         executable="static_transform_publisher",
         name="base_to_lidar_broadcaster",
         arguments=["0", "0", "0", "0", "0", "0", "base_link", "lidar2D"]
+    )
+
+    tf_base_to_lidar3D = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        name="base_to_lidar_broadcaster",
+        arguments=["0", "0", "0", "0", "0", "0", "base_link", "lidar3D"]
     )
 
     # RViz
@@ -93,13 +101,14 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        #rviz,
+        rviz,
         webots,
         robot_controller,
         fake_detector,
         #particle_filter,
         tf_map_to_odom,
-        tf_base_to_lidar,
+        tf_base_to_lidar2D,
+        tf_base_to_lidar3D,
         map_server,
         lifecycle_manager,
         teleop,

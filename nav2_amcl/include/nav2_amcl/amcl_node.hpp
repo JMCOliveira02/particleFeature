@@ -181,8 +181,7 @@ protected:
     rclcpp_lifecycle::LifecycleNode>> laser_scan_sub_;
   std::unique_ptr<tf2_ros::MessageFilter<sensor_msgs::msg::LaserScan>> laser_scan_filter_;
   message_filters::Connection laser_scan_connection_;
-  rclcpp::Subscription<robot_msgs::msg::FeatureArray>::SharedPtr 
-    feature_sub_;
+
 
   // Publishers and subscribers
   /*
@@ -195,6 +194,8 @@ protected:
     pose_pub_;
   rclcpp_lifecycle::LifecyclePublisher<nav2_msgs::msg::ParticleCloud>::SharedPtr
     particle_cloud_pub_;
+  rclcpp::Subscription<robot_msgs::msg::FeatureArray>::SharedPtr 
+    feature_sub_;
   /*
    * @brief Handle with an initial pose estimate is received
    */

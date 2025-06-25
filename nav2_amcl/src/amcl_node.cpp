@@ -52,6 +52,8 @@
 
 #include "nav2_amcl/portable_utils.hpp"
 #include "nav2_util/validate_messages.hpp"
+#include <robot_msgs/msg/feature.hpp>
+#include <robot_msgs/msg/feature_array.hpp>
 
 using namespace std::placeholders;
 using rcl_interfaces::msg::ParameterType;
@@ -788,7 +790,8 @@ void AmclNode::featureReceived(
   const robot_msgs::msg::FeatureArray::SharedPtr msg
 )
 {
-  auto x = msg;
+  robot_msgs::msg::FeatureArray::SharedPtr x;
+  x = msg;
   RCLCPP_INFO(get_logger(), "Feature received!");
   if (!active_) {return;}
 }
@@ -1581,12 +1584,14 @@ AmclNode::initPubSub()
   map_sub_ = create_subscription<nav_msgs::msg::OccupancyGrid>(
     map_topic_, rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable(),
     std::bind(&AmclNode::mapReceived, this, std::placeholders::_1));
-  
-  feature_sub_ = this->create_subscription<robot_msgs::msg::FeatureArray>(
+    
+  RCLCPP_INFO(get_logger(), "Subscribed to map topic.");
+
+  feature_sub_ = create_subscription<robot_msgs::msg::FeatureArray>(
         "/features", 10,
         std::bind(&AmclNode::featureReceived, this, std::placeholders::_1));
 
-  RCLCPP_INFO(get_logger(), "Subscribed to map topic.");
+  RCLCPP_INFO(get_logger(), "Subscribed to feature topic");
 }
 
 void
