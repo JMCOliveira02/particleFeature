@@ -17,6 +17,7 @@
 #include <robot_msgs/msg/feature_array.hpp>
 #include "robot_localization_package/FeatureStruct.hpp"
 #include "robot_localization_package/MapLoader.hpp"
+#include <tf2/utils.h>
 #include <vector>
 #include <random>
 #include <fstream>
@@ -148,6 +149,7 @@ private:
     double inject_percentage_;
     double replace_worst_percentage_;
     int estimate_num_particles_;
+    double odom_x, odom_y, odom_theta;
 
     // Logging
     std::ofstream log_file_;

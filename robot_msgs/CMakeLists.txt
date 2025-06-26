@@ -15,6 +15,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Feature.msg"
   "msg/FeatureArray.msg"
   DEPENDENCIES geometry_msgs
+  DEPENDENCIES std_msgs
 )
 
 if(BUILD_TESTING)
