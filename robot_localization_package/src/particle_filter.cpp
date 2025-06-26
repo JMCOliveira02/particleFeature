@@ -73,14 +73,29 @@ bool isParticleInFreeSpace(double x_world, double y_world, const PGMImage &pgm, 
 }
 
 ParticleFilter::ParticleFilter() : Node("particle_filter"),
-                                   last_x_(0.0), last_y_(0.0), last_theta_(0.0), iterationCounter(0.0), first_update_(true),
-                                   msg_odom_base_link_(nullptr), last_map_msg_(nullptr)
+                                    iterationCounter(0.0),
+                                    msg_odom_base_link_(nullptr), last_map_msg_(nullptr)
 {
     std::cout << "ParticleFilter Constructor START" << std::endl;
     RCLCPP_INFO(this->get_logger(), "Initializing particle filter node.");
 
+    tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
+
+    // Initialize the listener to populate the buffer
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
     // Load parameters from the parameter file
     loadParameters();
+
+    // Load PGM and calculate free space
+    calculateFreeSpaceFromPGM();
+     
+    // Initialize some variables
+    init_weight = 1.0 / num_particles_;
+
+    distr_theta = std::uniform_real_distribution<double>(-M_PI, M_PI);
+    distr_pgm_index = std::uniform_int_distribution<>(0, free_pixels.size() - 1);
+    generator_ = std::mt19937(rd());
 
     // Retrieve the map_features parameter passed from the launch file
 
@@ -107,7 +122,8 @@ ParticleFilter::ParticleFilter() : Node("particle_filter"),
 
     // Create publishers for the estimated pose and particles
     pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/estimated_pose", 10);
-    particles_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/particles", 10);
+    particles_color_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/particles_color", 10);
+    particles_no_color_pub_ = this->create_publisher<geometry_msgs::msg::PoseArray>("/particles_no_color", 10);
 
     // Create a transform broadcaster
     tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
@@ -118,15 +134,12 @@ ParticleFilter::ParticleFilter() : Node("particle_filter"),
     // Initialize the color pallete for the particles weights
     computeColorWeightLookup();
 
-    // Load PGM and calculate free space
-    calculateFreeSpaceFromPGM();
-
     // Initialize the particles
     initializeParticles_pgm();
 
     while (rclcpp::ok() && !last_map_msg_)
     {
-        // RCLCPP_INFO(this->get_logger(), "Waiting for the first keypoint message...");
+        RCLCPP_INFO(this->get_logger(), "Waiting for the first keypoint message...");
         rclcpp::spin_some(this->get_node_base_interface());
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
@@ -176,12 +189,6 @@ void ParticleFilter::loadParameters()
     success &= this->get_parameter("map_features", map_features_);
     success &= this->get_parameter("map_yaml", map_yaml_);
     success &= this->get_parameter("map_pgm", map_pgm_);
-    success &= this->get_parameter("min_avg_confidence", min_avg_confidence_);
-    success &= this->get_parameter("min_observation_likelihood", min_observation_likelihood_);
-    success &= this->get_parameter("suppress_resample_on_weak_obs", suppress_resample_on_weak_obs_);
-    success &= this->get_parameter("resample_cooldown", resample_cooldown_);
-
-    resample_cooldown_counter_ = 0;
 
     if (!success)
     {
@@ -292,7 +299,7 @@ std::vector<double> ParticleFilter::colorFromWeight(double weight) const
 }
 
 // publish the particles for visualization as markers
-void ParticleFilter::publishParticles()
+void ParticleFilter::publishParticles_with_color()
 {
     if (particles_.empty())
         return;
@@ -316,10 +323,7 @@ void ParticleFilter::publishParticles()
 
         tf2::Quaternion q;
         q.setRPY(0, 0, p.theta);
-        marker.pose.orientation.x = q.x();
-        marker.pose.orientation.y = q.y();
-        marker.pose.orientation.z = q.z();
-        marker.pose.orientation.w = q.w();
+        marker.pose.orientation = tf2::toMsg(q);
 
         marker.scale.x = 0.07;
         marker.scale.y = 0.005;
@@ -334,7 +338,33 @@ void ParticleFilter::publishParticles()
         marker_array.markers.push_back(marker);
     }
 
-    particles_pub_->publish(marker_array);
+    particles_color_pub_->publish(marker_array);
+}
+
+void ParticleFilter::publishParticles_no_color()
+{
+    if (particles_.empty())
+        return;
+
+    geometry_msgs::msg::PoseArray pose_array;
+
+    pose_array.header.frame_id = "map";
+    pose_array.header.stamp = this->get_clock()->now();
+    
+    for (const auto &p : particles_)
+    {
+        geometry_msgs::msg::Pose pose;
+        pose.position.x = p.x;
+        pose.position.y = p.y;
+        pose.position.z = 0.0;
+    
+        tf2::Quaternion q;
+        q.setRPY(0, 0, p.theta);
+        pose.orientation = tf2::toMsg(q);
+    
+        pose_array.poses.push_back(pose);
+    }
+    particles_no_color_pub_->publish(pose_array);
 }
 
 // replace the worst particles with random ones in white part of pgm (free space)
@@ -346,23 +376,14 @@ void ParticleFilter::replaceWorstParticles_pgm(double percentage)
 
     int num_replace = static_cast<int>(num_particles_ * percentage);
 
-    // Sample random particles
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> index_dist(0, free_pixels.size() - 1);
-
-    std::uniform_real_distribution<double> dist_theta(-M_PI, M_PI);
-
-    double init_weight = 1.0 / num_particles_;
-
     for (int i = 0; i < num_replace; i++)
     {
-        auto [x_pix, y_pix] = free_pixels[index_dist(gen)];
+        auto [x_pix, y_pix] = free_pixels[distr_pgm_index(generator_)];
         auto [x, y] = pixelToWorld(x_pix, y_pix, resolution, origin, pgm.height);
 
         particles_[i].x = x;
         particles_[i].y = y;
-        particles_[i].theta = dist_theta(generator_);
+        particles_[i].theta = distr_theta(generator_);
         particles_[i].weight = init_weight;
     }
 
@@ -372,12 +393,6 @@ void ParticleFilter::replaceWorstParticles_pgm(double percentage)
 // replace and inject random particles into the filter in white part of pgm (free space)
 void ParticleFilter::injectRandomParticles_pgm(double percentage)
 {
-    // replace random particles
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> index_dist(0, free_pixels.size() - 1);
-
-    std::uniform_real_distribution<double> dist_theta(-M_PI, M_PI);
 
     int num_replace = static_cast<int>(num_particles_ * percentage);
 
@@ -387,16 +402,14 @@ void ParticleFilter::injectRandomParticles_pgm(double percentage)
         index = rand() % static_cast<int>(num_particles_);
     }
 
-    double init_weight = 1.0 / num_particles_;
-
     for (int i : random_indices)
     {
-        auto [x_pix, y_pix] = free_pixels[index_dist(gen)];
+        auto [x_pix, y_pix] = free_pixels[distr_pgm_index(generator_)];
         auto [x, y] = pixelToWorld(x_pix, y_pix, resolution, origin, pgm.height);
 
         particles_[i].x = x;
         particles_[i].y = y;
-        particles_[i].theta = dist_theta(generator_);
+        particles_[i].theta = distr_theta(generator_);
         particles_[i].weight = init_weight;
     }
 }
@@ -409,28 +422,46 @@ void ParticleFilter::injectRandomParticles_pgm(double percentage)
 
 #pragma region feature handling
 
-// store the map message received from the topic
 void ParticleFilter::storeMapMessage(const robot_msgs::msg::FeatureArray::SharedPtr msg)
-{
+{    
+    // Received Features
     last_map_msg_ = msg;
-    new_map = true;
 
-    // Print received message details
-    RCLCPP_INFO(this->get_logger(), "Received FeatureArray message with %zu features", last_map_msg_->features.size());
-    for (const auto &obs_msg : last_map_msg_->features)
+    double delta_x, delta_y, delta_theta, delta_distance;
+
+    delta_x = odom_x - last_update_x_;
+    delta_y = odom_y - last_update_y_;
+    delta_theta = abs(odom_theta - last_update_theta_);
+    delta_distance = std::hypot(delta_x, delta_y);
+    RCLCPP_INFO(this->get_logger(), "delta_x: %.2f", delta_x);
+
+    if (delta_distance > motion_delta_distance_ || delta_theta > motion_delta_angle_)
     {
-        RCLCPP_INFO(this->get_logger(), "Feature - Type: %s, X: %.2f, Y: %.2f, Confidence: %.2f",
-                    obs_msg.type.c_str(), obs_msg.x, obs_msg.y, obs_msg.confidence);
+        // Update the particle weights and reset the robot motion logic
+        RCLCPP_INFO(this->get_logger(), "MeasureUpdate!");
+        measurementUpdate(last_map_msg_);
+        last_update_x_ = odom_x;
+        last_update_y_ = odom_y;
+        last_update_theta_ = odom_theta; 
     }
 }
 
-std::vector<map_features::Feature> ParticleFilter::getExpectedFeatures(const Particle &p, const std::string &type)
+std::vector<map_features::Feature> ParticleFilter::getExpectedFeatures(const Particle &p, double delta_scan_x, double delta_scan_y, double delta_scan_theta, const std::string &type)
 {
-
     std::vector<map_features::Feature> features_particle;
 
-    double cos_theta = std::cos(p.theta);
-    double sin_theta = std::sin(p.theta);
+    double scan_p_x = p.x - delta_scan_x;
+    double scan_p_y = p.y - delta_scan_y;
+    double scan_p_theta = p.theta - delta_scan_theta;
+    if (scan_p_theta < -M_PI)
+        scan_p_theta += 2 * M_PI;
+    else if (scan_p_theta > M_PI)
+        scan_p_theta -= 2 * M_PI;
+
+
+
+    double cos_theta = std::cos(scan_p_theta);
+    double sin_theta = std::sin(scan_p_theta);
 
     for (const auto &feature_ptr : global_features_)
     {
@@ -438,30 +469,18 @@ std::vector<map_features::Feature> ParticleFilter::getExpectedFeatures(const Par
         {
             auto object_ptr = std::dynamic_pointer_cast<map_features::Feature>(feature_ptr);
             if (!object_ptr)
-            {
-                RCLCPP_DEBUG(this->get_logger(), "Skipping feature due to type mismatch or invalid cast.");
                 continue;
-            }
 
             double map_x = object_ptr->x;
             double map_y = object_ptr->y;
             double feature_theta = object_ptr->theta;
 
-            double particle_x = cos_theta * (map_x - p.x) + sin_theta * (map_y - p.y);
-            double particle_y = -sin_theta * (map_x - p.x) + cos_theta * (map_y - p.y);
+            double particle_x = cos_theta * (map_x - scan_p_x) + sin_theta * (map_y - scan_p_y);
+            double particle_y = -sin_theta * (map_x - scan_p_x) + cos_theta * (map_y - scan_p_y);
 
             features_particle.emplace_back(particle_x, particle_y, feature_theta, type);
         }
     }
-
-    /* RCLCPP_INFO(this->get_logger(), "Particle: x=%.2f, y=%.2f, theta=%.2f", p.x, p.y, p.theta);
-    RCLCPP_INFO(this->get_logger(), "Type: %s", type.c_str());
-    RCLCPP_INFO(this->get_logger(), "Number of features found: %zu", features_particle.size());
-    for (const auto &feature : features_particle)
-    {
-        RCLCPP_INFO(this->get_logger(), "Feature: x=%.2f, y=%.2f, theta=%.2f, type=%s",
-                    feature.x, feature.y, feature.theta, feature.type.c_str());
-    } */
 
     return features_particle;
 }
@@ -516,15 +535,15 @@ double ParticleFilter::computeAngleLikelihood(double measured_angle, double expe
         error += 2 * M_PI;
 
     // double coeff = 1.0 / std::sqrt(2.0 * M_PI * sigma * sigma);
-    double exponent = -0.5 * (error * error) / (sigma * sigma);
+    double exponent = -0.5 * (error * error) / (10*sigma * sigma);
 
     return std::exp(exponent);
 }
 
 // compute the likelihood of a corner feature based on distance and angle
-double ParticleFilter::computeLikelihoodFeature(const Particle &p, double noisy_x, double noisy_y, double measured_theta, double sigma_pos, double sigma_theta, const std::string &type)
+double ParticleFilter::computeLikelihoodFeature(const Particle &p, double delta_scan_x, double delta_scan_y, double delta_scan_theta, double noisy_x, double noisy_y, double measured_theta, double sigma_pos, double sigma_theta, const std::string &type)
 {
-    std::vector<map_features::Feature> expected_features = getExpectedFeatures(p, type);
+    std::vector<map_features::Feature> expected_features = getExpectedFeatures(p,delta_scan_x, delta_scan_y, delta_scan_theta, type);
 
     double min_dist = std::numeric_limits<double>::max();
     map_features::Feature best_feature(0, 0, 0, type);
@@ -533,11 +552,7 @@ double ParticleFilter::computeLikelihoodFeature(const Particle &p, double noisy_
 
     for (const auto &exp : expected_features)
     {
-        // RCLCPP_INFO(this->get_logger(), "AAAAAAA");
-
         double dist = std::hypot(noisy_x - exp.x, noisy_y - exp.y);
-        // RCLCPP_INFO(this->get_logger(), "dist:%.1f ", dist);
-
         if (dist < min_dist)
         {
             min_dist = dist;
@@ -545,10 +560,14 @@ double ParticleFilter::computeLikelihoodFeature(const Particle &p, double noisy_
         }
     }
 
-    // RCLCPP_INFO(this->get_logger(), "min_dist: %.1f ", min_dist);
-
     // Compute likelihood based on distance and angle
-    double expected_feature_angle = transformAngleToParticleFrame(best_feature.theta, p.theta);
+    double scan_p_theta = p.theta - delta_scan_theta;
+    if (scan_p_theta < -M_PI)
+        scan_p_theta += 2 * M_PI;
+    else if (scan_p_theta > M_PI)
+        scan_p_theta -= 2 * M_PI;
+
+    double expected_feature_angle = transformAngleToParticleFrame(best_feature.theta, scan_p_theta);
     double angle_likelihood = computeAngleLikelihood(measured_theta, expected_feature_angle, sigma_theta);
     double distance_likelihood = (std::exp(-(min_dist * min_dist) / (2 * 2 * 2)));
     // RCLCPP_INFO(this->get_logger(), "min_dist: %.1f ", min_dist);
@@ -712,8 +731,7 @@ void ParticleFilter::residualResample()
     }
 
     std::uniform_real_distribution<double> dist(0.0, sum_residuals);
-    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-    generator_.seed(seed);
+
     while (total_copies < num_particles_)
     {
         double r = dist(generator_);
@@ -736,53 +754,27 @@ void ParticleFilter::residualResample()
 //! Resampling functions end !//
 
 //! Particle Filter Functions !//
+
 #pragma region pf functions
+
+void ParticleFilter::initializeParticle(Particle &p, double weight)
+{
+    auto [x_pix, y_pix] = free_pixels[distr_pgm_index(generator_)];
+    auto [x, y] = pixelToWorld(x_pix, y_pix, resolution, origin, pgm.height);
+    p.x = x;
+    p.y = y;
+    p.theta = distr_theta(generator_);
+    p.weight = weight;
+}
 
 void ParticleFilter::initializeParticles_pgm()
 {
-    // Sample random particles
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> index_dist(0, free_pixels.size() - 1);
-    std::uniform_real_distribution<> theta_dist(-M_PI, M_PI);
-    std::uniform_real_distribution<double> dist_theta(-M_PI, M_PI);
-    double init_weight = 1.0 / num_particles_;
-
+    RCLCPP_INFO(this->get_logger(),"init weight: %.2f", init_weight );
     particles_.resize(num_particles_);
     for (auto &p : particles_)
     {
-        auto [x_pix, y_pix] = free_pixels[index_dist(gen)];
-        auto [x, y] = pixelToWorld(x_pix, y_pix, resolution, origin, pgm.height);
-
-        geometry_msgs::msg::Pose pose;
-        p.x = x;
-        p.y = y;
-        p.theta = dist_theta(generator_);
-        p.weight = init_weight;
+        initializeParticle(p, init_weight);
     }
-
-    /* while(1){
-        publishParticles();
-        rclcpp::spin_some(this->get_node_base_interface());
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    } */
-
-    /* if (free_pixels.size() < static_cast<size_t>(num_particles_)) {
-        throw std::runtime_error("Not enough free pixels");
-    } */
-
-    /* while(1){
-        publishParticles();
-        rclcpp::spin_some(this->get_node_base_interface());
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    } */
-
-    /*  for (auto &p : particles_) {
-         p.x = dist_x(generator_);
-         p.y = dist_y(generator_);
-         p.theta = dist_theta(generator_);
-         p.weight = 1.0 / num_particles_;
-     }  */
 }
 
 void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
@@ -795,8 +787,8 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
 
     msg_odom_base_link_ = msg;
 
-    double odom_x = msg->pose.pose.position.x;
-    double odom_y = msg->pose.pose.position.y;
+    odom_x = msg->pose.pose.position.x;
+    odom_y = msg->pose.pose.position.y;
 
     tf2::Quaternion odom_q(
         msg->pose.pose.orientation.x,
@@ -804,11 +796,11 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
         msg->pose.pose.orientation.z,
         msg->pose.pose.orientation.w);
 
-    double roll, pitch, odom_theta;
+    double roll, pitch;
     tf2::Matrix3x3(odom_q).getRPY(roll, pitch, odom_theta);
 
-    double delta_x_odom = odom_x - last_x_;
-    double delta_y_odom = odom_y - last_y_;
+    double delta_x_odom = odom_x - last_odom_x_;
+    double delta_y_odom = odom_y - last_odom_y_;
     double delta_distance = std::hypot(delta_x_odom, delta_y_odom);
 
     std::uniform_real_distribution<double> noise_x(-motion_x_variance_, motion_x_variance_);
@@ -816,10 +808,11 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
     std::uniform_real_distribution<double> noise_theta(-motion_angle_variance_, motion_angle_variance_);
 
     double alpha_odom = atan2(delta_y_odom, delta_x_odom);
-    double alpha_robot = alpha_odom - last_theta_;
+    double alpha_robot = alpha_odom - last_odom_theta_;
     double delta_x_robot = delta_distance * std::cos(alpha_robot);
     double delta_y_robot = delta_distance * std::sin(alpha_robot);
-    double delta_theta_odom = odom_theta - last_theta_;
+
+    double delta_theta_odom = odom_theta - last_odom_theta_;
 
     // update particles if significant motion is detected
     if (delta_distance > motion_delta_distance_ || std::abs(delta_theta_odom) > motion_delta_angle_)
@@ -836,23 +829,20 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
                 p.theta += 2 * M_PI;
         }
 
-        last_x_ = odom_x;
-        last_y_ = odom_y;
-        last_theta_ = odom_theta;
+        last_odom_x_ = odom_x;
+        last_odom_y_ = odom_y;
+        last_odom_theta_ = odom_theta;
 
-        if (!last_map_msg_)
-        {
-            RCLCPP_WARN(this->get_logger(), "No keypoint message available yet.");
-            return;
-        }
-        // update the particles weights
-        measurementUpdate(last_map_msg_);
     }
 
-    publishParticles();
+    if(with_color_){
+        publishParticles_with_color();
+    }   
+    else{
+        publishParticles_no_color();
+    }
 }
 
-// FIX 2: Correct the max_element usage in measurementUpdate
 void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::SharedPtr msg)
 {
     if (particles_.empty())
@@ -861,20 +851,53 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
         return;
     }
 
-    if (new_map == false)
-    {
-        return;
-    }
-
-    bool all_outside = true;
-
     // Handle empty feature messages gracefully
     if (msg->features.empty())
     {
         RCLCPP_INFO(this->get_logger(), "No features detected - maintaining particle weights");
-        new_map = false;
         return;
     }
+
+    rclcpp::Time scan_timestamp = msg->header.stamp;
+
+    geometry_msgs::msg::TransformStamped scan_tf;
+
+    double scan_pose_x, scan_pose_y, scan_pose_theta;
+
+    bool all_outside = true;
+
+    try {
+        scan_tf = tf_buffer_->lookupTransform(
+            "odom",              // target frame
+            "base_footprint",    // source frame
+            scan_timestamp,                   // timestamp
+            rclcpp::Duration::from_seconds(0.1)  // timeout
+        );
+
+        // Convert to PoseStamped
+
+        scan_pose_x = scan_tf.transform.translation.x;
+        scan_pose_y = scan_tf.transform.translation.y;
+        scan_pose_theta = tf2::getYaw(scan_tf.transform.rotation);
+
+
+        // Now pose contains the pose of base_footprint in odom frame at time x
+    } catch (const tf2::TransformException & ex) {
+        scan_pose_x = odom_x;
+        scan_pose_y = odom_y;
+        scan_pose_theta = odom_theta;
+        RCLCPP_WARN(this->get_logger(), "Transform failed: %s", ex.what());
+    }
+
+    double delta_scan_x, delta_scan_y, delta_scan_theta;
+    delta_scan_x = odom_x - scan_pose_x;
+    delta_scan_y = odom_y - scan_pose_y;
+    delta_scan_theta = odom_theta - scan_pose_theta;
+    if (delta_scan_theta < -M_PI)
+        delta_scan_theta += 2 * M_PI;
+    else if (delta_scan_theta > M_PI)
+        delta_scan_theta -= 2 * M_PI;
+
 
     for (auto &p : particles_)
     {
@@ -887,7 +910,7 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
             double sigma_x = std::sqrt(obs.covariance_pos[0][0]);
             double sigma_y = std::sqrt(obs.covariance_pos[1][1]);
             double sigma_theta = std::sqrt(obs.angle_variance);
-            double sigma_pos = std::sqrt((sigma_x * sigma_x + sigma_y * sigma_y) / 2.0);
+            double sigma_pos = std::sqrt((sigma_x * sigma_x + sigma_y * sigma_y)/2);
 
             std::normal_distribution<double> noise_pos(0.0, sigma_pos);
             std::normal_distribution<double> noise_theta(0.0, sigma_theta);
@@ -901,7 +924,7 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
             with_angle_ = obs.with_angle;
 
             // Actually compute the feature likelihood
-            double feature_likelihood = computeLikelihoodFeature(p, noisy_x, noisy_y, measured_theta, sigma_pos, sigma_theta, obs.type);
+            double feature_likelihood = computeLikelihoodFeature(p, delta_scan_x, delta_scan_y, delta_scan_theta, noisy_x, noisy_y, measured_theta, sigma_pos, sigma_theta, obs.type);
 
             // RCLCPP_INFO(this->get_logger(), "feature likelihood: %.1f", likelihood);
 
@@ -934,7 +957,6 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
     {
         RCLCPP_WARN(this->get_logger(), "All particles are outside the free space.");
         injectRandomParticles_pgm(1); // Smaller injection
-        new_map = false;
         return;
     }
     else
@@ -955,8 +977,6 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
     {
         // adaptive_threshold *= 0.5; // Much more conservative
     }
-
-    double avg_weight = 1.0 / num_particles_;
 
     // **AGGRESSIVE: Use OR instead of AND, lower weight ratio threshold**
     bool ess_trigger = (ess <= num_particles_ * adaptive_threshold);
@@ -982,7 +1002,6 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
         resample_flag_ = false;
     }
 
-    new_map = false;
 }
 
 void ParticleFilter::resampleParticles(ResamplingAmount type, ResamplingMethod method)
@@ -999,31 +1018,6 @@ void ParticleFilter::resampleParticles(ResamplingAmount type, ResamplingMethod m
                                        { return sum + (p.weight * p.weight); });
 
     RCLCPP_INFO(this->get_logger(), "RESAMPLING: Max weight: %.6f, ESS: %.1f", max_weight, ess);
-
-    // **IMPROVEMENT 1: Remove redundant ESS check - trust the caller's decision**
-    // The measurementUpdate function already made the smart decision to call this
-    // Don't second-guess it here!
-
-    // **IMPROVEMENT 2: Only check for extreme cases where resampling would be harmful**
-    /*     if (ess > num_particles_ * 0.8) // Only skip if ESS > 80% (very well distributed)
-        {
-            RCLCPP_INFO(this->get_logger(), "ESS too high (%.1f%%) - resampling would hurt diversity",
-                        (ess / num_particles_) * 100.0);
-            return;
-        } */
-
-    // **IMPROVEMENT 3: Add safety check for weight concentration**
-    double avg_weight = 1.0 / num_particles_;
-    double weight_ratio = max_weight / avg_weight;
-
-    /*if (weight_ratio < 2.0) // Very uniform weights
-    {
-        RCLCPP_INFO(this->get_logger(), "Weight ratio too low (%.2fx) - resampling unnecessary", weight_ratio);
-        return;
-    } */
-
-    RCLCPP_INFO(this->get_logger(), "Proceeding with resampling: ESS=%.1f",
-                ess);
 
     resample_flag_ = true;
 
@@ -1093,14 +1087,13 @@ void ParticleFilter::computeEstimatedPose()
     // Use only the top estimate_num_particles_ particles
     int num_top_particles = std::min(estimate_num_particles_, static_cast<int>(sorted_particles.size()));
 
-    double x_sum = 0, y_sum = 0, theta_sum = 0, theta_x_sum = 0, theta_y_sum = 0, weight_sum = 0;
+    double x_sum = 0, y_sum = 0, theta_x_sum = 0, theta_y_sum = 0, weight_sum = 0;
 
     for (int i = 0; i < num_top_particles; i++)
     {
         const auto &p = sorted_particles[i];
         x_sum += p.x * p.weight;
         y_sum += p.y * p.weight;
-        theta_sum += p.theta * p.weight;
         theta_x_sum += std::cos(p.theta) * p.weight;
         theta_y_sum += std::sin(p.theta) * p.weight;
         weight_sum += p.weight;
@@ -1110,7 +1103,6 @@ void ParticleFilter::computeEstimatedPose()
     {
         x_sum /= weight_sum;
         y_sum /= weight_sum;
-        theta_sum /= weight_sum;
         theta_x_sum /= weight_sum;
         theta_y_sum /= weight_sum;
     }
@@ -1124,6 +1116,38 @@ void ParticleFilter::computeEstimatedPose()
         theta_last_final -= 2 * M_PI;
     if (theta_last_final < -M_PI)
         theta_last_final += 2 * M_PI;
+
+    // --- Covariance computation ---
+    double cov_xx = 0, cov_yy = 0, cov_tt = 0;
+    double cov_xy = 0, cov_xt = 0, cov_yt = 0;
+
+    for (int i = 0; i < num_top_particles; i++)
+    {
+        const auto &p = sorted_particles[i];
+        double dx = p.x - x_last_final;
+        double dy = p.y - y_last_final;
+
+        // Wrap angle difference to [-pi, pi]
+        double dtheta = p.theta - theta_last_final;
+        while (dtheta > M_PI) dtheta -= 2 * M_PI;
+        while (dtheta < -M_PI) dtheta += 2 * M_PI;
+
+        cov_xx += p.weight * dx * dx;
+        cov_yy += p.weight * dy * dy;
+        cov_tt += p.weight * dtheta * dtheta;
+
+    }
+
+    if (weight_sum > 0)
+    {
+        cov_xx /= weight_sum;
+        cov_yy /= weight_sum;
+        cov_tt /= weight_sum;
+    }
+
+    pose_covariance_[0] = cov_xx; // Covariance of x
+    pose_covariance_[1] = cov_yy; // Covariance of y
+    pose_covariance_[2] = cov_tt; // Covariance of theta
 }
 
 // publish the estimated pose and the map to odom transform
@@ -1136,7 +1160,7 @@ void ParticleFilter::publishEstimatedPose()
 
     if (!msg_odom_base_link_)
     {
-        // RCLCPP_WARN(this->get_logger(), "Skipping pose publication: No odometry data available.");
+        RCLCPP_WARN(this->get_logger(), "Skipping pose publication: No odometry data available.");
         return;
     }
 
@@ -1152,6 +1176,10 @@ void ParticleFilter::publishEstimatedPose()
     pose_msg.pose.pose.orientation.y = q.y();
     pose_msg.pose.pose.orientation.z = q.z();
     pose_msg.pose.pose.orientation.w = q.w();
+
+    pose_msg.pose.covariance[0] = pose_covariance_[0]; // Covariance of x
+    pose_msg.pose.covariance[7] = pose_covariance_[1]; // Covariance of y
+    pose_msg.pose.covariance[35] = pose_covariance_[2]; // Covariance of theta
     pose_pub_->publish(pose_msg);
 
     // Publish `map -> base_link` transform
@@ -1174,6 +1202,7 @@ void ParticleFilter::publishEstimatedPose()
 
     // RCLCPP_INFO(this->get_logger(), "Published estimated pose (Top 10 weighted particles).");
 }
+
 
 int main(int argc, char **argv)
 {

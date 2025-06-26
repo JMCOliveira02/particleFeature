@@ -123,8 +123,11 @@ private:
         MAX_WEIGHT
     };
 
-    // Random number generator
-    std::default_random_engine generator_;
+    // Random number generator and distributions
+    std::random_device rd;
+    std::mt19937 generator_;
+    std::uniform_real_distribution<double> distr_theta;
+    std::uniform_int_distribution<> distr_pgm_index;
 
     // Map loader and features
     map_features::MapLoader map_loader_;
@@ -133,6 +136,7 @@ private:
     double room_size_x_, room_size_y_;
 
     // Particle filter variables
+    double init_weight;
     double num_particles_;
     std::vector<Particle> particles_;
     bool resample_flag_ = false;
@@ -150,17 +154,22 @@ private:
 
     // ROS2 publishers, subscribers, and timers
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_pub_;
-    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr particles_pub_;
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr particles_color_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr particles_no_color_pub_;
     rclcpp::Subscription<robot_msgs::msg::FeatureArray>::SharedPtr feature_sub_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
     rclcpp::TimerBase::SharedPtr timer_pose_;
     std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+    std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+    std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
 
     // Last received messages
     robot_msgs::msg::FeatureArray::SharedPtr last_map_msg_;
 
     nav_msgs::msg::Odometry::SharedPtr msg_odom_base_link_;
 
+    // Timestamp of the last received map message
+    rclcpp::Time last_map_msg_timestamp_;
     // Timestamp of the last motion update
     rclcpp::Time last_motion_update_timestamp_;
 
@@ -176,10 +185,14 @@ private:
     int resample_cooldown_counter_;
 
     // Last estimated pose
-    double last_x_ = 0.0, last_y_ = 0.0, last_theta_ = 0.0;
+    double last_odom_x_ = 0.0, last_odom_y_ = 0.0, last_odom_theta_ = 0.0;
+    double last_update_x_ = 0.0, last_update_y_ = 0.0, last_update_theta_ = 0.0;
+
     double x_last_final = 0.0, y_last_final = 0.0, theta_last_final = 0.0;
+    double pose_covariance_[3] = { 0.0, 0.0, 0.0};    
 
     // Color weight lookup
+    bool with_color_ = false;
     std::vector<std::pair<double, std::vector<double>>> ColorWeightLookup;
 
     // Variables for automatic particle initialization from pgm
@@ -192,6 +205,7 @@ private:
     void calculateFreeSpaceFromPGM();
 
     // Initialization
+    void initializeParticle(Particle &p, double weight);
     void initializeParticles_pgm();
 
     // Particle filter steps
@@ -215,18 +229,23 @@ private:
     void computeEstimatedPose();
     void publishEstimatedPose();
 
-    // Particle handling
-    void publishParticles();
+    // Particle visualization
+    void publishParticles_with_color();
+    void publishParticles_no_color();
 
+    
     // Feature handling
     void storeMapMessage(const robot_msgs::msg::FeatureArray::SharedPtr msg);
     bool new_map = false;
-    std::vector<map_features::Feature> getExpectedFeatures(const Particle &p, const std::string &type);
+    std::vector<map_features::Feature> getExpectedFeatures(const Particle &p, double delta_scan_x, double delta_scan_y, double delta_scan_theta, const std::string &type);
     double transformAngleToParticleFrame(double feature_theta_map, double particle_theta);
     double computeAngleLikelihood(double measured_angle, double expected_angle, double sigma);
     DecodedMsg decodeMsg(const robot_msgs::msg::Feature &msg);
 
-    double computeLikelihoodFeature(const Particle &p, double noisy_x, double noisy_y, double measured_theta, double sigma_pos, double sigma_theta, const std::string &type);
+    double computeLikelihoodFeature(
+        const Particle &p, 
+        double delta_scan_x, double delta_scan_y, double delta_scan_theta, 
+        double noisy_x, double noisy_y, double measured_theta, double sigma_pos, double sigma_theta, const std::string &type);
 
     // Color weight functions
     std::vector<double> colorFromWeight(double weight) const;
