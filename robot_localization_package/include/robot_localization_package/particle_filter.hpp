@@ -177,15 +177,11 @@ private:
     bool first_update_ = true;
     bool with_angle_ = false;
 
-    double min_avg_confidence_;
-    double min_observation_likelihood_;
-    bool suppress_resample_on_weak_obs_;
-    int resample_cooldown_;
-    int resample_cooldown_counter_;
-
     // Last estimated pose
     double last_odom_x_ = 0.0, last_odom_y_ = 0.0, last_odom_theta_ = 0.0;
     double last_update_x_ = 0.0, last_update_y_ = 0.0, last_update_theta_ = 0.0;
+
+    double last_x_ = 0.0, last_y_ = 0.0, last_theta_ = 0.0;
 
     double x_last_final = 0.0, y_last_final = 0.0, theta_last_final = 0.0;
     double pose_covariance_[3] = { 0.0, 0.0, 0.0};    
@@ -202,6 +198,8 @@ private:
     
     // PGM loader
     void calculateFreeSpaceFromPGM();
+
+    void loadParameters();
     
     // Initialization
     void initializeParticle(Particle &p, double weight);
@@ -214,6 +212,9 @@ private:
     
     // Resampling methods
     void residualResample();
+    void multinomialResample();
+    void stratifiedResample();
+    void systematicResample();
     
     // Particle management
     void normalizeWeights();
@@ -243,8 +244,6 @@ private:
     std::vector<double> colorFromWeight(double weight) const;
     void computeColorWeightLookup();
 
-    // Parameter loading
-    void loadParameters();
 };
 
 #endif // PARTICLE_FILTER_HPP

@@ -73,8 +73,8 @@ bool isParticleInFreeSpace(double x_world, double y_world, const PGMImage &pgm, 
 }
 
 ParticleFilter::ParticleFilter() : Node("particle_filter"),
-                                    iterationCounter(0.0),
-                                    msg_odom_base_link_(nullptr), last_map_msg_(nullptr)
+                                   last_x_(0.0), last_y_(0.0), last_theta_(0.0), iterationCounter(0.0), first_update_(true),
+                                   msg_odom_base_link_(nullptr), last_map_msg_(nullptr)
 {
     std::cout << "ParticleFilter Constructor START" << std::endl;
     RCLCPP_INFO(this->get_logger(), "Initializing particle filter node.");
@@ -184,12 +184,7 @@ void ParticleFilter::loadParameters()
     success &= this->get_parameter("map_features", map_features_);
     success &= this->get_parameter("map_yaml", map_yaml_);
     success &= this->get_parameter("map_pgm", map_pgm_);
-    success &= this->get_parameter("min_avg_confidence", min_avg_confidence_);
-    success &= this->get_parameter("min_observation_likelihood", min_observation_likelihood_);
-    success &= this->get_parameter("suppress_resample_on_weak_obs", suppress_resample_on_weak_obs_);
-    success &= this->get_parameter("resample_cooldown", resample_cooldown_);
 
-    resample_cooldown_counter_ = 0;
 
     if (!success)
     {
@@ -518,6 +513,12 @@ double ParticleFilter::computeAngleLikelihood(double measured_angle, double expe
     if (measured_angle < -M_PI)
         measured_angle += 2 * M_PI;
 
+    if (expected_angle > M_PI)
+        expected_angle -= 2 * M_PI;
+    if (expected_angle < -M_PI)
+        expected_angle += 2 * M_PI;
+
+
     double error = measured_angle - expected_angle;
 
     while (error > M_PI)
@@ -610,6 +611,91 @@ ParticleFilter::DecodedMsg ParticleFilter::decodeMsg(const robot_msgs::msg::Feat
 //! Resampling functions start !//
 
 #pragma region resampling functions
+
+void ParticleFilter::multinomialResample()
+{
+    std::vector<Particle> new_particles;
+    new_particles.reserve(num_particles_);
+
+    std::vector<double> cumulative_weights(num_particles_);
+    cumulative_weights[0] = particles_[0].weight;
+    for (size_t i = 1; i < num_particles_; i++)
+    {
+        cumulative_weights[i] = cumulative_weights[i - 1] + particles_[i].weight;
+    }
+
+    std::uniform_real_distribution<double> dist(0.0, cumulative_weights.back());
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    generator_.seed(seed);
+
+    for (size_t i = 0; i < num_particles_; i++)
+    {
+        double r = dist(generator_);
+        auto it = std::lower_bound(cumulative_weights.begin(), cumulative_weights.end(), r);
+        int index = std::distance(cumulative_weights.begin(), it);
+        new_particles.push_back(particles_[index]);
+    }
+
+    particles_ = new_particles;
+}
+
+void ParticleFilter::stratifiedResample()
+{
+    std::vector<Particle> new_particles;
+    new_particles.reserve(num_particles_);
+
+    std::vector<double> cumulative_weights(num_particles_);
+    cumulative_weights[0] = particles_[0].weight;
+    for (size_t i = 1; i < num_particles_; i++)
+    {
+        cumulative_weights[i] = cumulative_weights[i - 1] + particles_[i].weight;
+    }
+
+    std::uniform_real_distribution<double> dist(0.0, 1.0 / num_particles_);
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    generator_.seed(seed);
+
+    int index = 0;
+    for (size_t i = 0; i < num_particles_; i++)
+    {
+        double r = dist(generator_); // Generate new random variable for each particle
+        double U = r + (i / static_cast<double>(num_particles_));
+        while (U > cumulative_weights[index])
+            index++;
+        new_particles.push_back(particles_[index]);
+    }
+
+    particles_ = new_particles;
+}
+
+void ParticleFilter::systematicResample()
+{
+    std::vector<Particle> new_particles;
+    new_particles.reserve(num_particles_);
+
+    // Compute cumulative weights
+    std::vector<double> cumulative_weights(num_particles_);
+    cumulative_weights[0] = particles_[0].weight;
+    for (size_t i = 1; i < num_particles_; i++)
+    {
+        cumulative_weights[i] = cumulative_weights[i - 1] + particles_[i].weight;
+    }
+
+    std::uniform_real_distribution<double> dist(0.0, 1.0 / num_particles_);
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    generator_.seed(seed);
+    double r = dist(generator_);
+    int index = 0;
+    for (size_t i = 0; i < num_particles_; i++)
+    {
+        double U = r + (i / static_cast<double>(num_particles_));
+        while (U > cumulative_weights[index])
+            index++;
+        new_particles.push_back(particles_[index]);
+    }
+
+    particles_ = new_particles;
+}
 
 void ParticleFilter::residualResample()
 {
@@ -733,13 +819,6 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
                 p.theta += 2 * M_PI;
         }
 
-        bool penalize = !isParticleInFreeSpace(p.x, p.y, pgm, resolution, origin);
-        //if (penalize)
-        //{
-            //initializeParticle(p, p.weight);
-        //    p.weight = init_weight;
-        //}
-
         last_x_ = odom_x;
         last_y_ = odom_y;
         last_theta_ = odom_theta;
@@ -856,10 +935,7 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
                                        [](double sum, const Particle &p)
                                        { return sum + (p.weight * p.weight); });
 
-    // Adaptive ESS threshold based on number of features and their quality
-    double base_threshold = resample_ess_threshold_;
-    double adaptive_threshold = base_threshold;
-
+  
     if (msg->features.size() < 2) // Few features
     {
         // adaptive_threshold *= 0.5; // Much more conservative
@@ -868,7 +944,7 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
     double avg_weight = 1.0 / num_particles_;
 
     // **AGGRESSIVE: Use OR instead of AND, lower weight ratio threshold**
-    bool ess_trigger = (ess <= num_particles_ * adaptive_threshold);
+    bool ess_trigger = (ess <= num_particles_ * resample_ess_threshold_);
 
     if (ess_trigger)
     {
