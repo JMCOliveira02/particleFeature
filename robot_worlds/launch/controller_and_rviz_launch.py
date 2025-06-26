@@ -53,6 +53,17 @@ def generate_launch_description():
         output="screen"
     )
 
+    # Waypoint Follower
+    trial_type = "Nave_A"
+    waypoint_file = f"/home/joao/ros2_ws/src/robot_waypoint_follower/robot_waypoint_follower/{trial_type}.yaml"
+    waypoint_follower = Node(
+        package='robot_waypoint_follower',
+        executable='waypoint_follower',
+        name='waypoint_follower',
+        parameters=[{'waypoints_file' : waypoint_file}], 
+        output='screen'
+    )
+
 
     return LaunchDescription([
         rviz,
@@ -60,6 +71,7 @@ def generate_launch_description():
         webots,
         robot_controller,
         teleop,
+        waypoint_follower, 
         launch.actions.RegisterEventHandler(
             event_handler=launch.event_handlers.OnProcessExit(
                 target_action=webots,

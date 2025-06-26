@@ -24,8 +24,13 @@ PathTracker::PathTracker() : Node("path_tracker"), tf_buffer_(this->get_clock())
     auto time_t_now = std::chrono::system_clock::to_time_t(now);
 
     std::stringstream filename;
+    std::string trial_type;
 
-    filename << "/home/joao/ros2_ws/src/robot_worlds/trials/trial_";
+
+    this->declare_parameter("trial_type", std::string(""));
+    this->get_parameter("trial_type", trial_type);
+
+    filename << "/home/joao/ros2_ws/src/robot_worlds/trials/" << trial_type << "_";
 
     filename << std::put_time(std::localtime(&time_t_now), "%Y-%m-%d_%H-%M") << ".csv";
 

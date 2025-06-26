@@ -1,6 +1,7 @@
 import os
 import launch
 from launch import LaunchDescription
+from launch.actions import ExecuteProcess
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 from webots_ros2_driver.webots_launcher import WebotsLauncher
@@ -38,7 +39,8 @@ def generate_launch_description():
     # Controller
     robot_controller = WebotsController(
         robot_name='robot',
-        parameters=[{'robot_description': robot_urdf}]
+        parameters=[{'robot_description': robot_urdf},
+                    {'use_sim_time' : True},]
     )
 
     # Fake detector
@@ -152,11 +154,36 @@ def generate_launch_description():
         prefix='gnome-terminal --'
     )
 
-    # Path Tracker
+    # Record and playback trajectory (not used)
+    trial_type = "Nave_A"
+    
+    ##Path Tracker
     path_tracker = Node(
         package='robot_worlds',
         executable='path_tracker',
         name='path_tracker',
+        parameters=[{'trial_type' : trial_type}], 
+        output='screen'
+    )
+
+    ## RosBag commander
+    recording_path = f"/home/joao/ros2_ws/recordings/{trial_type}"
+    rosbag_play = ExecuteProcess(
+        cmd=['ros2', 'bag', 'play', recording_path],
+        output='screen'
+    )
+    rosbag_record = ExecuteProcess(
+        cmd=['ros2', 'bag', 'record', '/cmd_vel', '-o', recording_path],
+        output='screen'
+    )
+
+    # Waypoint Follower
+    waypoint_file = f"/home/joao/ros2_ws/src/robot_waypoint_follower/robot_waypoint_follower/{trial_type}.yaml"
+    waypoint_follower = Node(
+        package='robot_waypoint_follower',
+        executable='waypoint_follower',
+        name='waypoint_follower',
+        parameters=[{'waypoints_file' : waypoint_file}], 
         output='screen'
     )
 
@@ -167,7 +194,7 @@ def generate_launch_description():
         particle_filter,
         #fake_detector,
         corner_detector_3D,
-        #path_tracker,
+        path_tracker,
         #fake_segmentator,
         segmentator,
         tf_map_to_odom,

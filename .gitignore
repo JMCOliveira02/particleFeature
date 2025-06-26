@@ -10,6 +10,8 @@
 !robot_worlds/**
 !nav2_amcl/
 !nav2_amcl/** 
+!robot_waypoint_follower/
+!robot_waypoint_follower/** 
 !.vscode/
 !README.md
 !LICENSE

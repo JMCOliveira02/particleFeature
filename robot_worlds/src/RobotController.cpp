@@ -80,48 +80,33 @@ void RobotController::init(
   last_right_wheel_pos = 0.0;
 
 
+
   this->node_ = node;
 
 }
+
+bool spawn_ = true;
 
 void RobotController::step() {
 
   #pragma region InitializePosition
   
-  double random_x = 0.0;
-  double random_y = 0.0;
-  double random_theta = 0.0;
-  bool randomSpawn = false;
-  if(false)
-  {
-    if(randomSpawn)
-    {  
-      unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-      generator_.seed(seed);
-      std::uniform_real_distribution<double> xy_dist(-0.65, 0.65);
-      std::uniform_real_distribution<double> theta_dist(-M_PI, M_PI);
-      
-      bool overlap = true;
-      while(overlap)
-      {
-        random_x = xy_dist(generator_);
-        random_y = xy_dist(generator_);
-        overlap = checkMapOverlap(random_x, random_y);
-      }
-      random_theta = theta_dist(generator_);
-    }
-    std::cout << "Initializing position: x " <<  random_x <<" y: " << random_y<< std::endl;
-    std::cout << "Initializing orientation: " << random_theta << std::endl;
-    double init_position[3] = {random_x, random_y, 0.0};
-    double init_orientation[4] = {0.0, 0.0, 1.0, random_theta};
+  double spawn_x = -1.7;
+  double spawn_y = 3;
+  double spawn_theta = 0.0;
 
+  if(spawn_){
+    spawn_ = false;
+    std::cout << "Initializing position: x " <<  spawn_x <<" y: " << spawn_y<< std::endl;
+    std::cout << "Initializing orientation: " << spawn_theta << std::endl;
+    double init_position[3] = {spawn_x, spawn_y, 0.4};
+    double init_orientation[4] = {0.0, 0.0, 1.0, spawn_theta};
     WbFieldRef translation_field = wb_supervisor_node_get_field(robot_node, "translation");
     WbFieldRef rotation_field = wb_supervisor_node_get_field(robot_node, "rotation");
-
     wb_supervisor_field_set_sf_vec3f(translation_field, init_position);
     wb_supervisor_field_set_sf_rotation(rotation_field, init_orientation);
-
   }
+
 
   
   #pragma endregion InitializePosition
