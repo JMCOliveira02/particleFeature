@@ -124,6 +124,9 @@ private:
         MAX_WEIGHT
     };
 
+    bool first_features_received_;
+    bool first_odom_received_;
+
     // Random number generator and distributions
     std::random_device rd;
     std::mt19937 generator_;

@@ -16,9 +16,12 @@
 
 #include "geometry_msgs/msg/twist.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"  // Add this include
 
 #include "nav_msgs/msg/odometry.hpp"
 #include <nav_msgs/msg/odometry.h>
+
+#include "std_msgs/msg/int64.hpp"  // Add this include
 
 #include "tf2_ros/transform_broadcaster.h"
 #include <tf2/LinearMath/Quaternion.h>
@@ -27,8 +30,6 @@
 
 #include <random>
 #include <chrono>
-
-
 
 namespace robot_controller {
 
@@ -46,6 +47,10 @@ private:
       
   geometry_msgs::msg::Twist cmd_vel_msg;
 
+  // Add missing member declarations
+  rclcpp::Publisher<std_msgs::msg::Int64>::SharedPtr set_position_confirmation_;
+  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr set_position_subscription_;
+  int64_t pcl_count = 0;  // Add missing variable
 
   std::default_random_engine generator_;
   

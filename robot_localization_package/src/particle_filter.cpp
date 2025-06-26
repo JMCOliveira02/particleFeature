@@ -74,7 +74,10 @@ bool isParticleInFreeSpace(double x_world, double y_world, const PGMImage &pgm, 
 
 ParticleFilter::ParticleFilter() : Node("particle_filter"),
                                     iterationCounter(0.0),
-                                    msg_odom_base_link_(nullptr), last_map_msg_(nullptr)
+                                    msg_odom_base_link_(nullptr), 
+                                    last_map_msg_(nullptr),
+                                    first_odom_received_(false),      // Add these
+                                    first_features_received_(false)   // Add these
 {
     std::cout << "ParticleFilter Constructor START" << std::endl;
     RCLCPP_INFO(this->get_logger(), "Initializing particle filter node.");
@@ -89,9 +92,6 @@ ParticleFilter::ParticleFilter() : Node("particle_filter"),
 
     // Load PGM and calculate free space
     calculateFreeSpaceFromPGM();
-     
-    // Initialize some variables
-    init_weight = 1.0 / num_particles_;
 
     distr_theta = std::uniform_real_distribution<double>(-M_PI, M_PI);
     distr_pgm_index = std::uniform_int_distribution<>(0, free_pixels.size() - 1);
@@ -111,11 +111,12 @@ ParticleFilter::ParticleFilter() : Node("particle_filter"),
     map_loader_.loadToGlobalMap(map_features_);
     global_features_ = map_loader_.getGlobalFeatureMap();
 
+    // Subscribe to odometry FIRST
     odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
         "/odom", 10,
         std::bind(&ParticleFilter::motionUpdate, this, std::placeholders::_1));
 
-    // Subscribe to the features observed by the robot and odometry topics
+    // Subscribe to features
     feature_sub_ = this->create_subscription<robot_msgs::msg::FeatureArray>(
         "/features", 10,
         std::bind(&ParticleFilter::storeMapMessage, this, std::placeholders::_1));
@@ -134,15 +135,10 @@ ParticleFilter::ParticleFilter() : Node("particle_filter"),
     // Initialize the color pallete for the particles weights
     computeColorWeightLookup();
 
+    init_weight = 1.0 / num_particles_;
+
     // Initialize the particles
     initializeParticles_pgm();
-
-    while (rclcpp::ok() && !last_map_msg_)
-    {
-        RCLCPP_INFO(this->get_logger(), "Waiting for the first keypoint message...");
-        rclcpp::spin_some(this->get_node_base_interface());
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
 
     RCLCPP_INFO(this->get_logger(), "Particle filter node initialized successfully.");
 }
@@ -424,26 +420,41 @@ void ParticleFilter::injectRandomParticles_pgm(double percentage)
 
 void ParticleFilter::storeMapMessage(const robot_msgs::msg::FeatureArray::SharedPtr msg)
 {    
+    if (!first_odom_received_) {
+        RCLCPP_WARN(this->get_logger(), "Received features before odometry - skipping");
+        return;
+    }
     // Received Features
     last_map_msg_ = msg;
 
-    double delta_x, delta_y, delta_theta, delta_distance;
-
-    delta_x = odom_x - last_update_x_;
-    delta_y = odom_y - last_update_y_;
-    delta_theta = abs(odom_theta - last_update_theta_);
-    delta_distance = std::hypot(delta_x, delta_y);
-    RCLCPP_INFO(this->get_logger(), "delta_x: %.2f", delta_x);
-
+    // Calculate motion since last measurement update
+    double delta_x = odom_x - last_update_x_;
+    double delta_y = odom_y - last_update_y_;
+    double delta_theta = std::abs(odom_theta - last_update_theta_);
+    double delta_distance = std::hypot(delta_x, delta_y);
+    
+    RCLCPP_DEBUG(this->get_logger(), "Motion since last update: distance=%.3f, angle=%.3f", 
+                 delta_distance, delta_theta);
+                 
+    // Only do measurement update if we've moved enough
     if (delta_distance > motion_delta_distance_ || delta_theta > motion_delta_angle_)
     {
-        // Update the particle weights and reset the robot motion logic
-        RCLCPP_INFO(this->get_logger(), "MeasureUpdate!");
+        RCLCPP_INFO(this->get_logger(), "🔄 Measurement update! Moved %.3fm, rotated %.3f rad since last update", 
+                    delta_distance, delta_theta);
+        RCLCPP_INFO(this->get_logger(), "   Processing %zu features", msg->features.size());
+        
+        // Perform measurement update
         measurementUpdate(last_map_msg_);
+        
+        // Update the last positions where we did a measurement
         last_update_x_ = odom_x;
         last_update_y_ = odom_y;
-        last_update_theta_ = odom_theta; 
+        last_update_theta_ = odom_theta;
+    } else {
+        RCLCPP_DEBUG(this->get_logger(), "Not enough motion for measurement update (%.3fm < %.3fm)", 
+                     delta_distance, motion_delta_distance_);
     }
+
 }
 
 std::vector<map_features::Feature> ParticleFilter::getExpectedFeatures(const Particle &p, double delta_scan_x, double delta_scan_y, double delta_scan_theta, const std::string &type)
@@ -799,6 +810,27 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
     double roll, pitch;
     tf2::Matrix3x3(odom_q).getRPY(roll, pitch, odom_theta);
 
+    // Handle first odometry message
+    if (!first_odom_received_)
+    {
+        RCLCPP_INFO(this->get_logger(), "🚗 First odometry received at position (%.3f, %.3f, %.3f rad)", 
+                    odom_x, odom_y, odom_theta);
+        
+        // Initialize all tracking variables
+        last_odom_x_ = odom_x;
+        last_odom_y_ = odom_y;
+        last_odom_theta_ = odom_theta;
+        
+        // IMPORTANT: Also initialize the last_update positions
+        // This prevents huge jumps when first feature arrives
+        last_update_x_ = odom_x;
+        last_update_y_ = odom_y;
+        last_update_theta_ = odom_theta;
+        
+        first_odom_received_ = true;
+        return; // Skip motion update on first message
+    }
+
     double delta_x_odom = odom_x - last_odom_x_;
     double delta_y_odom = odom_y - last_odom_y_;
     double delta_distance = std::hypot(delta_x_odom, delta_y_odom);
@@ -811,12 +843,19 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
     double alpha_robot = alpha_odom - last_odom_theta_;
     double delta_x_robot = delta_distance * std::cos(alpha_robot);
     double delta_y_robot = delta_distance * std::sin(alpha_robot);
-
     double delta_theta_odom = odom_theta - last_odom_theta_;
+
+    // Normalize angle
+    while (delta_theta_odom > M_PI) delta_theta_odom -= 2 * M_PI;
+    while (delta_theta_odom < -M_PI) delta_theta_odom += 2 * M_PI;
+
 
     // update particles if significant motion is detected
     if (delta_distance > motion_delta_distance_ || std::abs(delta_theta_odom) > motion_delta_angle_)
     {
+        RCLCPP_DEBUG(this->get_logger(), "🤖 Updating particles: moved %.3fm, rotated %.3f rad", 
+                     delta_distance, delta_theta_odom);
+
         for (auto &p : particles_)
         {
             p.x += delta_x_robot * std::cos(p.theta) - delta_y_robot * std::sin(p.theta) + noise_x(generator_);
@@ -842,7 +881,7 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
         publishParticles_no_color();
     }
 }
-
+  
 void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::SharedPtr msg)
 {
     if (particles_.empty())

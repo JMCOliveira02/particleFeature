@@ -18,12 +18,21 @@ namespace robot_controller
       webots_ros2_driver::WebotsNode *node,
       std::unordered_map<std::string, std::string> &parameters)
   {
+    // ✅ DEBUG: Init called
+    std::cout << "🚀 RobotController::init() called!" << std::endl;
 
     right_motor = wb_robot_get_device("right wheel motor");
     left_motor = wb_robot_get_device("left wheel motor");
 
     right_encoder = wb_robot_get_device("right wheel encoder");
     left_encoder = wb_robot_get_device("left wheel encoder");
+
+    // ✅ DEBUG: Check if devices were found
+    std::cout << "📡 Device setup:" << std::endl;
+    std::cout << "   left_motor: " << (left_motor ? "✅ Found" : "❌ NULL") << std::endl;
+    std::cout << "   right_motor: " << (right_motor ? "✅ Found" : "❌ NULL") << std::endl;
+    std::cout << "   left_encoder: " << (left_encoder ? "✅ Found" : "❌ NULL") << std::endl;
+    std::cout << "   right_encoder: " << (right_encoder ? "✅ Found" : "❌ NULL") << std::endl;
 
     lidar2D = wb_robot_get_device("lidar2D");
     wb_lidar_enable(lidar2D, TIME_STEP);
@@ -46,10 +55,33 @@ namespace robot_controller
           this->cmd_vel_msg.angular = msg->angular;
         });
 
+    set_position_confirmation_ = node->create_publisher<std_msgs::msg::Int64>(
+      "/set_position_confirmation", rclcpp::QoS(10));
+
+    set_position_subscription_ = node->create_subscription<geometry_msgs::msg::PoseStamped>(
+        "/set_position", rclcpp::QoS(10),
+        [this](const geometry_msgs::msg::PoseStamped::SharedPtr msg){
+          RCLCPP_INFO(node_->get_logger(), "Received set_position command");
+          double position[3] = {msg->pose.position.x, msg->pose.position.y, msg->pose.position.z};
+          double orientation[4] = {msg->pose.orientation.x, msg->pose.orientation.y, msg->pose.orientation.z, msg->pose.orientation.w};
+          WbFieldRef translation_field = wb_supervisor_node_get_field(robot_node, "translation");
+          WbFieldRef rotation_field = wb_supervisor_node_get_field(robot_node, "rotation");
+          wb_supervisor_field_set_sf_vec3f(translation_field, position);
+          wb_supervisor_field_set_sf_rotation(rotation_field, orientation);
+          pcl_count++;
+          auto confirmation_msg = std_msgs::msg::Int64();
+          confirmation_msg.data = pcl_count; 
+          set_position_confirmation_->publish(confirmation_msg);
+        }
+    );
+
     tf_broadcaster_relative = std::make_shared<tf2_ros::TransformBroadcaster>(node);
     tf_broadcaster_real = std::make_shared<tf2_ros::TransformBroadcaster>(node);
 
     odom_pub_ = node->create_publisher<nav_msgs::msg::Odometry>("/odom", rclcpp::QoS(10));
+
+    // ✅ DEBUG: Check if publisher was created
+    std::cout << "📤 odom_pub_ created: " << (odom_pub_ ? "✅ Success" : "❌ Failed") << std::endl;
 
     est_x = 0.0;
     est_y = 0.0;
@@ -58,13 +90,23 @@ namespace robot_controller
     last_right_wheel_pos = 0.0;
 
     this->node_ = node;
+
+    // ✅ DEBUG: Init complete
+    std::cout << "✅ RobotController::init() completed successfully!" << std::endl;
   }
 
   void RobotController::step()
   {
+    // ✅ DEBUG: Step function called with counter
+    static int step_counter = 0;
+    step_counter++;
+    
+    // Print every 100 steps to avoid spam, but always print first 10
+    if (step_counter <= 10 || step_counter % 100 == 0) {
+        std::cout << "🔄 RobotController::step() #" << step_counter << " - first_update: " << (first_update ? "true" : "false") << std::endl;
+    }
 
 #pragma region InitializePosition
-
     double random_x = 0.0;
     double random_y = 0.0;
     double random_theta = 0.0;
@@ -98,13 +140,16 @@ namespace robot_controller
       wb_supervisor_field_set_sf_vec3f(translation_field, init_position);
       wb_supervisor_field_set_sf_rotation(rotation_field, init_orientation);
     }
-
 #pragma endregion InitializePosition
 
 #pragma region RealPositionBroadcast
-
     const double *position = wb_supervisor_node_get_position(robot_node);
     const double *orientation = wb_supervisor_node_get_orientation(robot_node);
+
+    // ✅ DEBUG: Check real position (print occasionally)
+    if (step_counter <= 5 || step_counter % 500 == 0) {
+        std::cout << "🌍 Real position: x=" << position[0] << ", y=" << position[1] << ", z=" << position[2] << std::endl;
+    }
 
     tf2::Matrix3x3 mat(
         orientation[0], orientation[1], orientation[2],
@@ -133,17 +178,34 @@ namespace robot_controller
     left_wheel_position = wb_position_sensor_get_value(left_encoder);
     right_wheel_position = wb_position_sensor_get_value(right_encoder);
 
+    // ✅ DEBUG: Wheel positions
+    if (step_counter <= 10 || step_counter % 100 == 0) {
+        std::cout << "🛞 Wheel positions - left: " << left_wheel_position << ", right: " << right_wheel_position << std::endl;
+    }
+
     if (first_update)
     {
+      // ✅ DEBUG: First update
+      std::cout << "🏁 FIRST UPDATE - setting initial wheel positions and NOT publishing odometry" << std::endl;
+      std::cout << "   Initial left_wheel: " << left_wheel_position << std::endl;
+      std::cout << "   Initial right_wheel: " << right_wheel_position << std::endl;
+      
       first_update = false;
+      last_left_wheel_pos = left_wheel_position;  // ✅ IMPORTANT: Set initial positions!
+      last_right_wheel_pos = right_wheel_position;
+      
+      std::cout << "   first_update now set to: false" << std::endl;
     }
     else
     {
-
+      // ✅ DEBUG: Regular update
       double delta_left_wheel = left_wheel_position - last_left_wheel_pos;
       double delta_right_wheel = right_wheel_position - last_right_wheel_pos;
 
-      // std::cout << "LW_Pos: " << left_wheel_position << " -- RW_Pos: " << right_wheel_position << std::endl;
+      if (step_counter <= 20 || step_counter % 100 == 0) {
+          std::cout << "📊 REGULAR UPDATE #" << step_counter << std::endl;
+          std::cout << "   Delta wheels - left: " << delta_left_wheel << ", right: " << delta_right_wheel << std::endl;
+      }
 
       double delta_distance = (delta_left_wheel + delta_right_wheel) * WHEEL_RADIUS / 2.0;
       double delta_theta = (delta_right_wheel - delta_left_wheel) * WHEEL_RADIUS / (2 * HALF_DISTANCE_BETWEEN_WHEELS);
@@ -164,7 +226,10 @@ namespace robot_controller
         est_theta -= 2 * M_PI;
       if (est_theta < -M_PI)
         est_theta += 2 * M_PI;
-      // std::cout << "X: " << est_x << " -- Y: " << est_y << std::endl;
+
+      if (step_counter <= 20 || step_counter % 100 == 0) {
+          std::cout << "🎯 Estimated pose: x=" << est_x << ", y=" << est_y << ", theta=" << est_theta << std::endl;
+      }
 
       tf2::Quaternion est_q;
       est_q.setRPY(0, 0, est_theta);
@@ -195,32 +260,20 @@ namespace robot_controller
       odom.pose.pose.orientation.w = est_q.w();
       odom.twist.twist.linear.x = 0.0;
       odom.twist.twist.angular.z = 0.0;
+
+      // ✅ DEBUG: Publishing odometry
+      if (step_counter <= 20 || step_counter % 100 == 0) {
+          std::cout << "📤 PUBLISHING ODOMETRY #" << step_counter << std::endl;
+          std::cout << "   Publishing to /odom topic..." << std::endl;
+      }
+      
       odom_pub_->publish(odom);
+      
+      if (step_counter <= 20 || step_counter % 100 == 0) {
+          std::cout << "✅ Odometry published successfully!" << std::endl;
+      }
     }
 #pragma endregion EstimatedPositionBroadcast
-
-#pragma region SensorFrameBroadcast
-    // Add sensor frame transform: base_footprint_real -> sensor_frame
-    geometry_msgs::msg::TransformStamped tf_sensor;
-    tf_sensor.header.stamp = node_->get_clock()->now();
-    tf_sensor.header.frame_id = "base_footprint_real";
-    tf_sensor.child_frame_id = "sensor_frame";
-
-    // exactly 0.3 m up in the base frame:
-    tf_sensor.transform.translation.x = 0.0;
-    tf_sensor.transform.translation.y = 0.0;
-    tf_sensor.transform.translation.z = 0.3;
-
-    // no rotation (angle=0) — identity quaternion:
-    tf2::Quaternion sensor_q;
-    sensor_q.setRPY(0.0, 0.0, 0.0);
-    tf_sensor.transform.rotation.x = sensor_q.x();
-    tf_sensor.transform.rotation.y = sensor_q.y();
-    tf_sensor.transform.rotation.z = sensor_q.z();
-    tf_sensor.transform.rotation.w = sensor_q.w();
-
-    tf_broadcaster_real->sendTransform(tf_sensor);
-#pragma endregion SensorFrameBroadcast
 
 #pragma region SpeedControl
 
@@ -236,6 +289,12 @@ namespace robot_controller
 
     wb_motor_set_velocity(left_motor, command_motor_left);
     wb_motor_set_velocity(right_motor, command_motor_right);
+
+    // ✅ DEBUG: Motor commands (occasionally)
+    if (step_counter <= 5 || (step_counter % 500 == 0 && (forward_speed != 0 || angular_speed != 0))) {
+        std::cout << "🚗 Motor commands - left: " << command_motor_left << ", right: " << command_motor_right << std::endl;
+        std::cout << "   From cmd_vel - forward: " << forward_speed << ", angular: " << angular_speed << std::endl;
+    }
 
 #pragma endregion SpeedControl
   }
