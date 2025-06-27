@@ -49,7 +49,7 @@ def generate_launch_description():
         package="rviz2",
         executable="rviz2",
         name="rviz2",
-        arguments=["-d", os.path.join(world_dir, "rviz", "tf_and_map.rviz")],
+        arguments=["-d", os.path.join(world_dir, "rviz", "amcl.rviz")],
         output="screen"
     )
 
@@ -70,8 +70,8 @@ def generate_launch_description():
         tf_static_lidar,
         webots,
         robot_controller,
-        teleop,
-        waypoint_follower, 
+        #teleop,
+        #waypoint_follower, 
         launch.actions.RegisterEventHandler(
             event_handler=launch.event_handlers.OnProcessExit(
                 target_action=webots,

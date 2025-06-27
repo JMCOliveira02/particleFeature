@@ -27,6 +27,7 @@ from launch_ros.actions import LoadComposableNodes, SetParameter
 from launch_ros.actions import Node
 from launch_ros.descriptions import ComposableNode, ParameterFile
 from nav2_common.launch import RewrittenYaml
+from launch.substitutions import PathJoinSubstitution
 
 
 def generate_launch_description():
@@ -74,7 +75,7 @@ def generate_launch_description():
     )
 
     declare_map_yaml_cmd = DeclareLaunchArgument(
-        'map', default_value='/home/joao/ros2_ws/src/robot_worlds/maps/iilab_amcl/iilab_amcl.yaml', description='Full path to map yaml file to load'
+        'map', default_value='/home/joao/ros2_ws/src/robot_worlds/maps/iilab/iilab.yaml', description='Full path to map yaml file to load'
     )
 
     declare_use_sim_time_cmd = DeclareLaunchArgument(

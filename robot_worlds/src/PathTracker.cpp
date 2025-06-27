@@ -7,7 +7,7 @@ PathTracker::PathTracker() : Node("path_tracker"), tf_buffer_(this->get_clock())
     estimated_path_pub_ = this->create_publisher<nav_msgs::msg::Path>("estimated_path", 10);
 
     pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-        "estimated_pose", 10,
+        "/estimated_pose", 10,
         std::bind(&PathTracker::poseCallback, this, std::placeholders::_1)
     );
 
@@ -47,7 +47,7 @@ PathTracker::PathTracker() : Node("path_tracker"), tf_buffer_(this->get_clock())
 
 void PathTracker::updatePaths() {
     updatePathForFrame("base_footprint_real", real_path, real_path_pub_, true);
-    updatePathForFrame("estimated_pose", estimated_path, estimated_path_pub_, false);
+    //updatePathForFrame("estimated_pose", estimated_path, estimated_path_pub_, false);
 }
 
 

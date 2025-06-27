@@ -19,6 +19,7 @@ def generate_launch_description():
 
     # World setup
     world_setup = "iilab"
+    trial_type = "Nave_A_MM"
     # Paths to files
     robot_urdf = os.path.join(worlds_dir, 'urdf', 'robot.urdf')
     world_file = os.path.join(worlds_dir, 'worlds',
@@ -31,7 +32,7 @@ def generate_launch_description():
         worlds_dir, 'feature_maps', world_setup + '.yaml')
     map_features_detection = os.path.join(
         worlds_dir, 'feature_maps', world_setup + '_detection' + '.yaml')
-    rviz_config = os.path.join(localization_dir, 'rviz', 'pf_3d.rviz')
+    rviz_config = os.path.join(localization_dir, 'rviz', 'mm_pf.rviz')
 
     # Webots
     webots = WebotsLauncher(world=world_file)
@@ -40,7 +41,8 @@ def generate_launch_description():
     robot_controller = WebotsController(
         robot_name='robot',
         parameters=[{'robot_description': robot_urdf},
-                    {'use_sim_time' : True},]
+                    {'use_sim_time' : False},
+                    ]
     )
 
     # Fake detector
@@ -155,8 +157,6 @@ def generate_launch_description():
     )
 
     # Record and playback trajectory (not used)
-    trial_type = "Nave_A"
-    
     ##Path Tracker
     path_tracker = Node(
         package='robot_worlds',
@@ -177,7 +177,7 @@ def generate_launch_description():
         output='screen'
     )
 
-    # Waypoint Follower
+        # Waypoint Follower
     waypoint_file = f"/home/joao/ros2_ws/src/robot_waypoint_follower/robot_waypoint_follower/{trial_type}.yaml"
     waypoint_follower = Node(
         package='robot_waypoint_follower',
@@ -187,6 +187,7 @@ def generate_launch_description():
         output='screen'
     )
 
+
     return LaunchDescription([
         rviz,
         webots,
@@ -194,7 +195,7 @@ def generate_launch_description():
         particle_filter,
         #fake_detector,
         corner_detector_3D,
-        path_tracker,
+        #path_tracker,
         #fake_segmentator,
         segmentator,
         tf_map_to_odom,
@@ -203,6 +204,7 @@ def generate_launch_description():
         map_server,
         lifecycle_manager,
         teleop,
+        #waypoint_follower,
         RegisterEventHandler(
             OnProcessExit(
                 target_action=webots,

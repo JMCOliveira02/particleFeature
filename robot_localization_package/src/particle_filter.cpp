@@ -440,7 +440,7 @@ void ParticleFilter::storeMapMessage(const robot_msgs::msg::FeatureArray::Shared
     delta_y = odom_y - last_update_y_;
     delta_theta = abs(odom_theta - last_update_theta_);
     delta_distance = std::hypot(delta_x, delta_y);
-    RCLCPP_INFO(this->get_logger(), "delta_x: %.2f", delta_x);
+    //RCLCPP_INFO(this->get_logger(), "delta_x: %.2f", delta_x);
 
     if (delta_distance > motion_delta_distance_ || delta_theta > motion_delta_angle_)
     {
@@ -766,7 +766,6 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
     }
 }
 
-
 void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::SharedPtr msg)
 {
     if (particles_.empty())
@@ -827,8 +826,8 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
             double sigma_pos = std::sqrt((sigma_x * sigma_x + sigma_y * sigma_y));
 
             // Compute likelihood based on feature type
-
-            likelihood += computeLikelihoodFeature(p, delta_scan_x, delta_scan_y, delta_scan_theta, obs.x, obs.y, obs.theta, sigma_pos, sigma_theta, obs.type);
+            double msg_likelihood = computeLikelihoodFeature(p, delta_scan_x, delta_scan_y, delta_scan_theta, obs.x, obs.y, obs.theta, sigma_pos, sigma_theta, obs.type);
+            likelihood += msg_likelihood * msg_likelihood * msg_likelihood;
         }
 
         p.weight *= likelihood;

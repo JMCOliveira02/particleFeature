@@ -12,7 +12,6 @@ bool checkMapOverlap(double x, double y){
 }
 
 WbNodeRef robot_node = wb_supervisor_node_get_from_def("ROBOT_1");
-
 void RobotController::init(
     webots_ros2_driver::WebotsNode *node,
     std::unordered_map<std::string, std::string> &parameters) {  
@@ -91,8 +90,11 @@ void RobotController::step() {
 
   #pragma region InitializePosition
   
+  //Nave_A (-1.7, 2)
+  //Nave_B
+  //Corredor
   double spawn_x = -1.7;
-  double spawn_y = 3;
+  double spawn_y = 2;
   double spawn_theta = 0.0;
 
   if(spawn_){
