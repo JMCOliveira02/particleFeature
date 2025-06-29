@@ -1,7 +1,7 @@
 particle_filter:
   ros__parameters:
     # PARTICLE COUNT - Good for robustness
-    num_particles: 4000.0       
+    num_particles: 2000.0       
     
     # MOTION MODEL - Currently too aggressive
     motion_delta_distance: 0.1             # ⬇️ REDUCED: More sensitive to motion (was 0.1)

@@ -1,8 +1,8 @@
 # Blender 4.2.2 LTS MTL File: 'Chair.blend'
 # www.blender.org
 
-newmtl Material__25_1.001
-Kd 0.0 1.0 0.0  # Green
+# newmtl Material__25_1.001
+# Kd 0.0 1.0 0.0  # Green
 #Ns 25.000000         # Specular exponent: slightly more shine for metal/plastic
 #Ka 0.080000 0.080000 0.080000  # Ambient color: dark gray
 #Kd 0.200000 0.200000 0.200000  # Diffuse color: medium gray (metal/plastic chair)
@@ -12,5 +12,18 @@ Kd 0.0 1.0 0.0  # Green
 #d 1.000000           # Transparency: fully opaque
 #illum 2              # Illumination model: 2 = ambient + diffuse + specular
 
+# newmtl Material__26_1.001
+# Kd 0.0 1.0 0.0  # Green
+
+newmtl Material__25_1.001
+Ns 0.000000
+Ka 0.010000 0.010000 0.010000
+Kd 0.020000 0.020000 0.020000  # Almost black fabric
+Ks 0.000000 0.000000 0.000000  # No shine
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 1
+
 newmtl Material__26_1.001
-Kd 0.0 1.0 0.0  # Green
+Kd 0.3 0.3 0.3  # Metallic dark grey

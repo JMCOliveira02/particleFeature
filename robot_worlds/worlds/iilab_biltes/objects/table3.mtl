@@ -1,0 +1,22 @@
+# Blender 4.0.2 MTL File: 'None'
+# www.blender.org
+
+newmtl MetalMaterial
+Ns 79.999985
+Ka 1.000000 1.000000 1.000000
+Kd 0.40 0.40 0.45  # Darker steel gray
+Ks 0.416667 0.416667 0.416667
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+
+newmtl WoodMaterial
+Ns 12.000001
+Ka 1.000000 1.000000 1.000000
+Kd 0.35 0.22 0.15  # Darker brown wood
+Ks 0.020000 0.020000 0.020000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2

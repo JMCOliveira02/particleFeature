@@ -944,7 +944,10 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
 
         for (const auto &obs_msg : msg->features)
         {
+
             DecodedMsg obs = decodeMsg(obs_msg);
+            //RCLCPP_INFO(this->get_logger(), "Feature: type='%s', x=%.3f, y=%.3f, theta=%.3f, confidence=%.3f", 
+            //obs.type.c_str(), obs.x, obs.y, obs.theta, obs.confidence);
 
             double sigma_x = std::sqrt(obs.covariance_pos[0][0]);
             double sigma_y = std::sqrt(obs.covariance_pos[1][1]);
@@ -994,13 +997,29 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
 
     if (all_outside == true)
     {
-        RCLCPP_WARN(this->get_logger(), "All particles are outside the free space.");
+        RCLCPP_WARN(this->get_logger(), "⚠️ All particles are outside the free space - injecting random particles");
         injectRandomParticles_pgm(1); // Smaller injection
         return;
     }
     else
     {
+        RCLCPP_INFO(this->get_logger(), "✅ Normalizing weights - particles are in valid space");
         normalizeWeights();
+        
+        // Print weight statistics after normalization
+        double min_weight = std::numeric_limits<double>::max();
+        double max_weight = 0.0;
+        double avg_weight = 0.0;
+        
+        for (const auto &p : particles_) {
+            min_weight = std::min(min_weight, p.weight);
+            max_weight = std::max(max_weight, p.weight);
+            avg_weight += p.weight;
+        }
+        avg_weight /= particles_.size();
+        
+        RCLCPP_INFO(this->get_logger(), "📈 Weight Stats: min=%.6f, max=%.6f, avg=%.6f, ratio=%.2f", 
+                    min_weight, max_weight, avg_weight, max_weight/min_weight);
     }
 
     // Calculate ESS for resampling decision
@@ -1008,26 +1027,39 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
                                        [](double sum, const Particle &p)
                                        { return sum + (p.weight * p.weight); });
 
+    RCLCPP_INFO(this->get_logger(), "📊 ESS Calculation: ESS=%.2f, num_particles=%d, ratio=%.3f", 
+                ess, static_cast<int>(num_particles_), ess/num_particles_);
+
     // Adaptive ESS threshold based on number of features and their quality
     double base_threshold = resample_ess_threshold_;
     double adaptive_threshold = base_threshold;
 
+    RCLCPP_INFO(this->get_logger(), "🎯 Thresholds: base=%.3f, adaptive=%.3f, features=%zu", 
+                base_threshold, adaptive_threshold, msg->features.size());
+
     if (msg->features.size() < 2) // Few features
     {
         // adaptive_threshold *= 0.5; // Much more conservative
+        RCLCPP_INFO(this->get_logger(), "⚠️ Few features detected (%zu), keeping conservative threshold", 
+                    msg->features.size());
     }
 
     // **AGGRESSIVE: Use OR instead of AND, lower weight ratio threshold**
     bool ess_trigger = (ess <= num_particles_ * adaptive_threshold);
+    double ess_threshold_value = num_particles_ * adaptive_threshold;
+
+    RCLCPP_INFO(this->get_logger(), "🔄 Resampling Decision: ESS(%.2f) <= threshold(%.2f)? %s", 
+                ess, ess_threshold_value, ess_trigger ? "YES - RESAMPLING" : "NO");
 
     if (ess_trigger)
     {
+        RCLCPP_INFO(this->get_logger(), "🔄 TRIGGERING RESAMPLING: ESS too low");
         resampleParticles(ResamplingAmount::MAX_WEIGHT, ResamplingMethod::RESIDUAL);
     }
     else
     {
-        RCLCPP_INFO(this->get_logger(), "NO RESAMPLING: ESS=%.1f",
-                    ess);
+        RCLCPP_INFO(this->get_logger(), "✅ NO RESAMPLING: ESS=%.1f is sufficient (threshold=%.1f)",
+                    ess, ess_threshold_value);
     }
 
     // Continuous small replacement to prevent stagnation

@@ -1,19 +1,22 @@
 #VRML_SIM R2025a utf8
 
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/computers/protos/Monitor.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/pallet/protos/WoodenPalletStack.proto"
+
 WorldInfo {
 }
 Viewpoint {
   fieldOfView 2
-  orientation -0.10839388783164493 -0.025901478785930458 0.9937705361286593 2.396440079528676
-  position -0.7174717169384144 0.5658859787802988 2.005477824882277
-  exposure 5
+  orientation 0.14652136149389003 -0.04973729796797017 -0.9879563208041244 4.139648649813348
+  position -1.0328200118101682 0.35386267933564186 2.114748059831639
   follow "robot"
   followType "Mounted Shot"
 }
 DirectionalLight {
-  ambientIntensity 0.9
+  ambientIntensity 0.4
+  color 0.95 0.98 1
   direction 0 -1 -1
-  intensity 7
+  intensity 4
   castShadows TRUE
 }
 Solid {
@@ -36,43 +39,12 @@ Solid {
     ]
   }
 }
-Solid {
-  translation -12.1099 29.89 -0.309987
-  rotation 0.5773499358549823 0.5773489358550934 0.5773519358547601 2.0944
-  children [
-    CadShape {
-      url [
-        "objects/BeltConveyor.obj"
-      ]
-    }
-  ]
-  name "Pallet_rack"
-  boundingObject Mesh {
-    url [
-      "objects/BeltConveyor.obj"
-    ]
-  }
+WoodenPalletStack {
+  translation -0.85 0.79 0
 }
 Solid {
-  translation -12.7299 23.53 3.18
-  rotation -0.577349935856137 0.5773509358560258 -0.577349935856137 2.09439
-  children [
-    CadShape {
-      url [
-        "objects/bastidorpaleteNameAndGrouped.obj"
-      ]
-    }
-  ]
-  name "Conveyor_belt"
-  boundingObject Mesh {
-    url [
-      "objects/bastidorpaleteNameAndGrouped.obj"
-    ]
-  }
-}
-Solid {
-  translation -1.8899 6.27 0.36989
-  rotation -3.675499999987874e-08 -2.568509999991526e-06 0.9999999999967009 3.14159
+  translation -0.8499 7.73 0.299893
+  rotation -2.531759999983294e-06 2.605269999982809e-06 -0.9999999999934015 -1.5707953071795862
   children [
     CadShape {
       url [
@@ -88,7 +60,24 @@ Solid {
   }
 }
 Solid {
-  translation -3.6399 0.96 0.369873
+  translation -1.1899 4.11 0.299886
+  rotation -0.8877154540383372 0.012703106497236613 0.4602172353865389 -5.307179586466759e-06
+  children [
+    CadShape {
+      url [
+        "objects/Chair.obj"
+      ]
+    }
+  ]
+  name "Chair(4)"
+  boundingObject Mesh {
+    url [
+      "objects/Chair.obj"
+    ]
+  }
+}
+Solid {
+  translation -3.6399 0.96 0.309873
   rotation 1.1030999999878191e-06 4.568159999949556e-06 -0.9999999999889575 1.57079
   children [
     CadShape {
@@ -105,8 +94,8 @@ Solid {
   }
 }
 Solid {
-  translation -4.4399 6.43 0.36989
-  rotation 0.9731757562280237 0.09727567563329795 0.20848594777610188 4.86755e-06
+  translation -14.0899 7.67 0.30989
+  rotation -2.6052299999852396e-06 2.131749999987922e-06 -0.9999999999943343 -1.5708053071795867
   children [
     CadShape {
       url [
@@ -122,8 +111,93 @@ Solid {
   }
 }
 Solid {
-  translation -9.4699 3.77 0.369883
-  rotation -0.9472032091029885 0.065807114527468 0.31380806927574195 -5.307179586466759e-06
+  translation -15.6499 7.67 0.30989
+  rotation -2.6052299999852396e-06 2.131749999987922e-06 -0.9999999999943343 -1.5708053071795867
+  children [
+    CadShape {
+      url [
+        "objects/Chair.obj"
+      ]
+    }
+  ]
+  name "Chair(5)"
+  boundingObject Mesh {
+    url [
+      "objects/Chair.obj"
+    ]
+  }
+}
+Solid {
+  translation -17.1599 7.67 0.30989
+  rotation -2.6052299999852396e-06 2.131749999987922e-06 -0.9999999999943343 -1.5708053071795867
+  children [
+    CadShape {
+      url [
+        "objects/Chair.obj"
+      ]
+    }
+  ]
+  name "Chair(6)"
+  boundingObject Mesh {
+    url [
+      "objects/Chair.obj"
+    ]
+  }
+}
+Solid {
+  translation -17.6899 1.45 0.309862
+  rotation 0.7555418579048444 0.07551968579697287 0.6507328776163246 6.26969e-06
+  children [
+    CadShape {
+      url [
+        "objects/Chair.obj"
+      ]
+    }
+  ]
+  name "Chair(9)"
+  boundingObject Mesh {
+    url [
+      "objects/Chair.obj"
+    ]
+  }
+}
+Solid {
+  translation -17.8399 13.95 0.309913
+  rotation -2.131769999987922e-06 -2.605249999985239e-06 0.9999999999943341 -1.5707853071795865
+  children [
+    CadShape {
+      url [
+        "objects/Chair.obj"
+      ]
+    }
+  ]
+  name "Chair(7)"
+  boundingObject Mesh {
+    url [
+      "objects/Chair.obj"
+    ]
+  }
+}
+Solid {
+  translation -19.3599 13.95 0.309913
+  rotation -2.131769999987922e-06 -2.605249999985239e-06 0.9999999999943341 -1.5707853071795865
+  children [
+    CadShape {
+      url [
+        "objects/Chair.obj"
+      ]
+    }
+  ]
+  name "Chair(8)"
+  boundingObject Mesh {
+    url [
+      "objects/Chair.obj"
+    ]
+  }
+}
+Solid {
+  translation -9.4699 1.59 0.36988
+  rotation -1.7462499999944574e-07 -2.513489999992022e-06 0.9999999999968261 3.14159
   children [
     CadShape {
       url [
@@ -138,224 +212,177 @@ Solid {
     ]
   }
 }
-Solid {
-  translation -9.29994 15.65 -0.370055
-  rotation 0.5773499358549823 0.5773489358550934 0.5773519358547601 2.0944
-  children [
-    CadShape {
-      url [
-        "objects/armazemverticalassNameAndGrouped.obj"
-      ]
-    }
-  ]
-  name "armazemverticalassNameAndGrouped"
-  boundingObject Mesh {
-    url [
-      "objects/armazemverticalassNameAndGrouped.obj"
-    ]
-  }
+Monitor {
+  translation -0.38 4.09 1.12
+  rotation 0 0 1 3.14159
 }
 Solid {
-  translation -8.82994 19.23 -0.370035
-  rotation 0.5773499358549823 0.5773489358550934 0.5773519358547601 2.0944
-  children [
-    CadShape {
-      url [
-        "objects/asscompletaOriginalNameAndGrouped.blend1.obj"
-      ]
-    }
-  ]
-  name "asscompletaOriginalNameAndGrouped.blend1"
-  boundingObject Mesh {
-    url [
-      "objects/asscompletaOriginalNameAndGrouped.blend1.obj"
-    ]
-  }
-}
-Solid {
-  translation -13.1599 16.66 -0.370043
-  rotation 0.5773499358549823 0.5773489358550934 0.5773519358547601 2.0944
-  children [
-    CadShape {
-      url [
-        "objects/assmcNameAndGrouped.obj"
-      ]
-    }
-  ]
-  name "assmcNameAndGrouped"
-  boundingObject Mesh {
-    url [
-      "objects/assmcNameAndGrouped.obj"
-    ]
-  }
-}
-Solid {
-  translation -8.17994 34.93 -0.369949
-  rotation 0.5773499358549823 0.5773489358550934 0.5773519358547601 2.0944
-  children [
-    CadShape {
-      url [
-        "objects/CircularDriveTable.obj"
-      ]
-    }
-  ]
-  name "CircularDriveTable"
-  boundingObject Mesh {
-    url [
-      "objects/CircularDriveTable.obj"
-    ]
-  }
-}
-Solid {
-  translation -6.20994 21.73 -0.370015
-  rotation 0.5773499358549823 0.5773489358550934 0.5773519358547601 2.0944
-  children [
-    CadShape {
-      url [
-        "objects/desktop_pc.obj"
-      ]
-    }
-  ]
-  name "desktop_pc"
-  boundingObject Mesh {
-    url [
-      "objects/desktop_pc.obj"
-    ]
-  }
-}
-Solid {
-  translation -8.69991 27.28 -0.369997
-  rotation 0.5773499358549823 0.5773489358550934 0.5773519358547601 2.0944
-  children [
-    CadShape {
-      url [
-        "objects/haasMiniMill.obj"
-      ]
-    }
-  ]
-  name "haasMiniMill"
-  boundingObject Mesh {
-    url [
-      "objects/haasMiniMill.obj"
-    ]
-  }
-}
-Solid {
-  translation -13.12 33.23 -0.369967
-  rotation 0.5773499358549823 0.5773489358550934 0.5773519358547601 2.0944
-  children [
-    CadShape {
-      url [
-        "objects/Monitor.obj"
-      ]
-    }
-  ]
-  name "Monitor"
-  boundingObject Mesh {
-    url [
-      "objects/Monitor.obj"
-    ]
-  }
-}
-Solid {
-  translation -12.0999 27.35 -0.369997
-  rotation 0.5773499358549823 0.5773489358550934 0.5773519358547601 2.0944
-  children [
-    CadShape {
-      url [
-        "objects/ProjectionTable.obj"
-      ]
-    }
-  ]
-  name "ProjectionTable"
-  boundingObject Mesh {
-    url [
-      "objects/ProjectionTable.obj"
-    ]
-  }
-}
-Solid {
-  translation -3.6599 0.54 0.319882
+  translation -3.6599 0.540001 0.97988
   rotation -2.069399999993832e-07 -2.432779999992749e-06 0.9999999999970195 -3.1415853071795863
   children [
     CadShape {
       url [
-        "objects/Table.obj"
+        "objects/table3.obj"
       ]
     }
   ]
-  name "Table"
+  name "table33(3)"
   boundingObject Mesh {
     url [
-      "objects/Table.obj"
+      "objects/table3.obj"
     ]
   }
 }
 Solid {
-  translation -3.1399 6.4 0.319899
+  translation -0.8699 8.21 0.9399
   rotation -3.675499999987874e-08 -2.568509999991526e-06 0.9999999999967009 3.14159
   children [
     CadShape {
       url [
-        "objects/Table.obj"
+        "objects/table3.obj"
       ]
     }
   ]
-  name "Table(1)"
+  name "table3(1)"
   boundingObject Mesh {
     url [
-      "objects/Table.obj"
+      "objects/table3.obj"
     ]
   }
 }
 Solid {
-  translation -9.5199 6.40004 0.319899
+  translation -0.5999 4.08 0.9599
+  rotation 2.5317499999832943e-06 -2.605259999982809e-06 0.9999999999934015 1.5708
+  children [
+    CadShape {
+      url [
+        "objects/table3.obj"
+      ]
+    }
+  ]
+  name "table3(4)"
+  boundingObject Mesh {
+    url [
+      "objects/table3.obj"
+    ]
+  }
+}
+Solid {
+  translation -10.0099 1.54004 0.979881
   rotation -2.531759999983294e-06 2.605269999982809e-06 -0.9999999999934015 -1.5707953071795862
   children [
     CadShape {
       url [
-        "objects/Table.obj"
+        "objects/table3.obj"
       ]
     }
   ]
-  name "Table(2)"
+  name "table3(2)"
   boundingObject Mesh {
     url [
-      "objects/Table.obj"
+      "objects/table3.obj"
     ]
   }
 }
 Solid {
-  translation -6.68994 29.3 -0.369982
-  rotation 0.5773499358549823 0.5773489358550934 0.5773519358547601 2.0944
+  translation -14.0699 8.11004 0.979906
+  rotation -0.9802411840503911 0.014027102633733175 0.1973080370466187 -5.307179586466759e-06
   children [
     CadShape {
       url [
-        "objects/TreeConveyorSytem.obj"
+        "objects/table3.obj"
       ]
     }
   ]
-  name "TreeConveyorSytem"
+  name "table3(3)"
   boundingObject Mesh {
     url [
-      "objects/TreeConveyorSytem.obj"
+      "objects/table3.obj"
     ]
   }
 }
 Solid {
-  translation -10.0099 34.18 -0.36996
-  rotation 0.5773499358549823 0.5773489358550934 0.5773519358547601 2.0944
+  translation -17.8399 13.44 0.979934
+  rotation -0.9802411840503911 0.014027102633733175 0.1973080370466187 -5.307179586466759e-06
   children [
     CadShape {
       url [
-        "objects/TV+Stand.obj"
+        "objects/table3.obj"
       ]
     }
   ]
-  name "TV+Stand"
+  name "table3(7)"
   boundingObject Mesh {
     url [
-      "objects/TV+Stand.obj"
+      "objects/table3.obj"
+    ]
+  }
+}
+Solid {
+  translation -19.3299 13.44 0.979934
+  rotation -0.9802411840503911 0.014027102633733175 0.1973080370466187 -5.307179586466759e-06
+  children [
+    CadShape {
+      url [
+        "objects/table3.obj"
+      ]
+    }
+  ]
+  name "table3(8)"
+  boundingObject Mesh {
+    url [
+      "objects/table3.obj"
+    ]
+  }
+}
+Solid {
+  translation -15.5999 8.11004 0.979906
+  rotation -0.9802411840503911 0.014027102633733175 0.1973080370466187 -5.307179586466759e-06
+  children [
+    CadShape {
+      url [
+        "objects/table3.obj"
+      ]
+    }
+  ]
+  name "table3(5)"
+  boundingObject Mesh {
+    url [
+      "objects/table3.obj"
+    ]
+  }
+}
+Solid {
+  translation -17.1699 1.50004 0.979874
+  rotation -2.6383799999821453e-06 -2.5639299999826495e-06 0.9999999999932327 -1.5707953071795862
+  children [
+    CadShape {
+      url [
+        "objects/table3.obj"
+      ]
+    }
+  ]
+  name "table3(9)"
+  boundingObject Mesh {
+    url [
+      "objects/table3.obj"
+    ]
+  }
+}
+Solid {
+  translation -17.1599 8.11004 0.979906
+  rotation -0.9802411840503911 0.014027102633733175 0.1973080370466187 -5.307179586466759e-06
+  children [
+    CadShape {
+      url [
+        "objects/table3.obj"
+      ]
+    }
+  ]
+  name "table3(6)"
+  boundingObject Mesh {
+    url [
+      "objects/table3.obj"
     ]
   }
 }
@@ -382,7 +409,7 @@ Solid {
 }
 Background {
   skyColor [
-    0.14 0.14 0.14
+    0.8 0.8 0.82
   ]
 }
 DEF ROBOT_1 Robot {
@@ -390,23 +417,23 @@ DEF ROBOT_1 Robot {
   rotation 0.02063152122255651 -0.0027089277014204966 0.9997834775803967 2.876848748047924
   children [
     RangeFinder {
-      translation 0 0 0.3
-      rotation 0 -1 0 0
+      translation 0 0 1
+      rotation 0 1 0 0.3
       name "rangeFinder"
       fieldOfView 1
-      width 960
-      height 540
+      width 400
+      height 400
       minRange 0.4
-      maxRange 6
+      maxRange 5
     }
     Camera {
-      translation 0 0 0.3
-      rotation 0 -1 0 0
+      translation 0 0 1
+      rotation 0 1 0 0.3
       fieldOfView 1
-      width 960
-      height 540
+      width 400
+      height 400
       near 0.4
-      far 6
+      far 5
     }
     Lidar {
       translation 0.00553488 0 0.159904
@@ -1062,58 +1089,433 @@ DEF ROBOT_1 Robot {
   angularVelocity -8.927330713320206e-10 -1.3878656671159097e-09 5.647213934299263e-10
 }
 Solid {
-  translation -5 5 3.5
+  translation -5 2.53 3.5
   children [
     PointLight {
       attenuation 0.05 0.02 0.01
-      color 0.95 0.95 1
-      radius 12
+      color 1 0.997864 0.94667
+      intensity 0.5
+      radius 8
     }
   ]
   name "moderate_light_3"
+}
+Solid {
+  translation -5 6.33 3.5
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.5
+      radius 8
+    }
+  ]
+  name "moderate_light_3(4)"
+}
+Solid {
+  translation -5 10.94 2.99
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.5
+      radius 8
+    }
+  ]
+  name "moderate_light_3(16)"
+}
+Solid {
+  translation -7.72 10.94 2.99
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.5
+      radius 8
+    }
+  ]
+  name "moderate_light_3(18)"
+}
+Solid {
+  translation -9.64 10.94 2.99
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.5
+      radius 8
+    }
+  ]
+  name "moderate_light_3(19)"
+}
+Solid {
+  translation -10.96 10.94 2.99
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.5
+      radius 8
+    }
+  ]
+  name "moderate_light_3(20)"
+}
+Solid {
+  translation -12.5 10.94 2.99
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.5
+      radius 8
+    }
+  ]
+  name "moderate_light_3(21)"
+}
+Solid {
+  translation -14.26 10.94 2.99
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.5
+      radius 8
+    }
+  ]
+  name "moderate_light_3(22)"
+}
+Solid {
+  translation -16.8 10.94 2.99
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.5
+      radius 8
+    }
+  ]
+  name "moderate_light_3(23)"
+}
+Solid {
+  translation -18.87 10.94 2.99
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.5
+      radius 8
+    }
+  ]
+  name "moderate_light_3(24)"
+}
+Solid {
+  translation -21.81 10.94 2.99
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.5
+      radius 8
+    }
+  ]
+  name "moderate_light_3(25)"
+}
+Solid {
+  translation -25.3 10.94 2.99
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.5
+      radius 8
+    }
+  ]
+  name "moderate_light_3(26)"
+}
+Solid {
+  translation -25.3 15.16 4.11
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.5
+      radius 8
+    }
+  ]
+  name "moderate_light_3(27)"
+}
+Solid {
+  translation -20.6 13.05 3.19
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.5
+      radius 8
+    }
+  ]
+  name "moderate_light_3(29)"
+}
+Solid {
+  translation -20.6 17.52 3.19
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.5
+      radius 8
+    }
+  ]
+  name "moderate_light_3(30)"
+}
+Solid {
+  translation -17.56 17.52 3.19
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.5
+      radius 8
+    }
+  ]
+  name "moderate_light_3(31)"
+}
+Solid {
+  translation -17.56 15.51 3.19
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.5
+      radius 8
+    }
+  ]
+  name "moderate_light_3(32)"
+}
+Solid {
+  translation -25.3 19.33 4.11
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.5
+      radius 8
+    }
+  ]
+  name "moderate_light_3(28)"
+}
+Solid {
+  translation -1.6 10.94 2.99
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.5
+      radius 8
+    }
+  ]
+  name "moderate_light_3(17)"
 }
 Solid {
   translation -1.47 5 3.5
   children [
     PointLight {
       attenuation 0.05 0.02 0.01
-      color 0.95 0.95 1
-      radius 12
+      color 1 0.997864 0.94667
+      intensity 1.1
+      radius 9
     }
   ]
   name "moderate_light_3(3)"
 }
 Solid {
-  translation -8.72 5 3.5
+  translation -8.72 1.82 3.5
   children [
     PointLight {
       attenuation 0.05 0.02 0.01
-      color 0.95 0.95 1
-      radius 12
+      color 1 0.997864 0.94667
+      intensity 0.5
+      radius 8
     }
   ]
   name "moderate_light_3(1)"
 }
 Solid {
-  translation -16.56 5 3.5
+  translation -8.72 5.94 3.62
   children [
     PointLight {
       attenuation 0.05 0.02 0.01
-      color 0.95 0.95 1
-      radius 12
+      color 1 0.997864 0.94667
+      intensity 0.6
+      radius 8
+    }
+  ]
+  name "moderate_light_3(5)"
+}
+Solid {
+  translation -14.02 4.21 3.5
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.7
+      radius 8
     }
   ]
   name "moderate_light_3(2)"
 }
 Solid {
-  translation -15 -5 4
+  translation -14.02 6.73 3.5
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.7
+      radius 8
+    }
+  ]
+  name "moderate_light_3(6)"
+}
+Solid {
+  translation -17.57 6.73 3.5
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.7
+      radius 8
+    }
+  ]
+  name "moderate_light_3(7)"
+}
+Solid {
+  translation -17.57 4.21 3.5
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.7
+      radius 8
+    }
+  ]
+  name "moderate_light_3(8)"
+}
+Solid {
+  translation -18.9 4.21 3.5
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.7
+      radius 8
+    }
+  ]
+  name "moderate_light_3(9)"
+}
+Solid {
+  translation -18.9 6.28 3.5
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.7
+      radius 8
+    }
+  ]
+  name "moderate_light_3(10)"
+}
+Solid {
+  translation -21.94 6.28 3.5
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.7
+      radius 8
+    }
+  ]
+  name "moderate_light_3(11)"
+}
+Solid {
+  translation -21.94 2.45 3.5
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.7
+      radius 8
+    }
+  ]
+  name "moderate_light_3(12)"
+}
+Solid {
+  translation -25.86 2.45 3.5
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.7
+      radius 8
+    }
+  ]
+  name "moderate_light_3(13)"
+}
+Solid {
+  translation -25.86 7.31 3.5
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.7
+      radius 8
+    }
+  ]
+  name "moderate_light_3(14)"
+}
+Solid {
+  translation -27.74 7.31 3.5
+  children [
+    PointLight {
+      attenuation 0.05 0.02 0.01
+      color 1 0.997864 0.94667
+      intensity 0.7
+      radius 8
+    }
+  ]
+  name "moderate_light_3(15)"
+}
+Solid {
+  translation -5.79 -5 4
   children [
     PointLight {
       attenuation 0.08 0.04 0.02
+      intensity 3
       radius 20
     }
   ]
   name "gentle_fill"
+}
+Solid {
+  translation -22.96 -5 4
+  children [
+    PointLight {
+      attenuation 0.08 0.04 0.02
+      intensity 3
+      radius 20
+    }
+  ]
+  name "gentle_fill(1)"
+}
+Solid {
+  translation -30.23 22.06 4
+  children [
+    PointLight {
+      attenuation 0.08 0.04 0.02
+      intensity 3
+      radius 20
+    }
+  ]
+  name "gentle_fill(2)"
 }
 Solid {
   translation -4.49 2.71 2.12

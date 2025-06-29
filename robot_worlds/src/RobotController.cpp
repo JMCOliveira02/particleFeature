@@ -1,4 +1,6 @@
 #include "robot_worlds/RobotController.hpp"
+#include <thread>
+#include <chrono>
 
 #define TIME_STEP 32
 #define HALF_DISTANCE_BETWEEN_WHEELS 0.165 // Red robot (0.165) and blue (0.045)
@@ -78,10 +80,21 @@ namespace robot_controller
     tf_broadcaster_relative = std::make_shared<tf2_ros::TransformBroadcaster>(node);
     tf_broadcaster_real = std::make_shared<tf2_ros::TransformBroadcaster>(node);
 
+    // ✅ CRITICAL: Debug publisher creation step by step
+    std::cout << "📤 Creating odom publisher..." << std::endl;
     odom_pub_ = node->create_publisher<nav_msgs::msg::Odometry>("/odom", rclcpp::QoS(10));
-
+    std::cout << "📤 odom_pub_ pointer: " << (void*)odom_pub_.get() << std::endl;
+    
+    // ✅ CRITICAL: Force a small delay after publisher creation
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    
     // ✅ DEBUG: Check if publisher was created
     std::cout << "📤 odom_pub_ created: " << (odom_pub_ ? "✅ Success" : "❌ Failed") << std::endl;
+    
+    if (odom_pub_) {
+        std::cout << "📤 Publisher topic: " << odom_pub_->get_topic_name() << std::endl;
+        std::cout << "📤 Publisher QoS depth: " << odom_pub_->get_actual_qos().depth() << std::endl;
+    }
 
     est_x = 0.0;
     est_y = 0.0;
@@ -267,10 +280,28 @@ namespace robot_controller
           std::cout << "   Publishing to /odom topic..." << std::endl;
       }
       
+      // ✅ CRITICAL: Check publisher state before publishing
+      if (!odom_pub_) {
+          std::cout << "❌ CRITICAL ERROR: odom_pub_ is NULL at step " << step_counter << std::endl;
+          return;
+      }
+      
+      // ✅ CRITICAL: Check subscriber count
+      if (step_counter <= 20 || step_counter % 100 == 0) {
+          std::cout << "📊 Publisher info: subscribers=" << odom_pub_->get_subscription_count() << std::endl;
+      }
+      
       odom_pub_->publish(odom);
       
+      // ✅ CRITICAL: Always print for first few steps, then occasionally
       if (step_counter <= 20 || step_counter % 100 == 0) {
           std::cout << "✅ Odometry published successfully!" << std::endl;
+      }
+      
+      // ✅ CRITICAL: Add a small delay to ensure message is processed
+      if (step_counter <= 10) {
+          std::this_thread::sleep_for(std::chrono::microseconds(100));
+          std::cout << "🕒 Added small delay for step " << step_counter << std::endl;
       }
     }
 #pragma endregion EstimatedPositionBroadcast
