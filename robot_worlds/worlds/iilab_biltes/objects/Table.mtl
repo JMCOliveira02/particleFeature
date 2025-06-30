@@ -1,0 +1,25 @@
+# Blender 4.4.3 MTL File: 'None'
+# www.blender.org
+
+# newmtl Material__29.001
+# Ns 0.000000
+# Ka 1.000000 1.000000 1.000000
+# Kd 1.000000 0.000000 0.000000
+# Ks 0.000000 0.000000 0.000000
+# Ke 0.000000 0.000000 0.000000
+# Ni 1.500000
+# d 1.000000
+# illum 1
+
+# Blender 4.4.3 MTL File: 'None'
+# www.blender.org
+
+newmtl Material__29.001
+Ns 15.000000         # Moderate specular for wood finish
+Ka 0.080000 0.040000 0.015000  # Warm brown ambient
+Kd 0.050000 0.030000 0.020000  # Almost dark chocolate
+Ks 0.080000 0.060000 0.040000  # Subtle wood shine
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2              # Full lighting for wood grain effect
