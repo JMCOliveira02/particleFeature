@@ -4,8 +4,8 @@ WorldInfo {
 }
 Viewpoint {
   fieldOfView 2
-  orientation -0.13588709412382788 -0.021977807881527263 0.9904805266189258 2.060328729761098
-  position -0.5473305493666674 2.3811542519914486 0.6816191605344913
+  orientation -0.10752355226749931 -0.18639129137459093 -0.976574099701344 1.137757263157568
+  position -2.7606842408002463 4.1532768133730436 0.8754017786080329
   exposure 5
   follow "robot"
   followType "Mounted Shot"
@@ -62,28 +62,29 @@ Background {
   ]
 }
 DEF ROBOT_1 Robot {
-  translation -1.7102 3.07672 0.396284
-  rotation 1 0 0 0
+  translation -1.7040611107188508 2.0000280149240206 0.39637391766562846
+  rotation -0.004588961836146033 -0.9999893690328444 0.0004508331844194309 0.04097537239311063
   children [
     RangeFinder {
-      translation 0.1 0 0.3
-      rotation 0 -1 0 0.3
+      translation 0 0 1
+      rotation 0 0.9999999999999999 0 0
       name "rangeFinder"
-      fieldOfView 2.5
-      width 500
-      height 500
-      maxRange 15
+      fieldOfView 1
+      width 800
+      height 800
+      maxRange 5
     }
     Camera {
-      translation 0.1 0 0.3
-      rotation 0 -1 0 0.3
-      fieldOfView 2.5
-      width 500
-      height 500
+      translation 0 0 1
+      fieldOfView 1
+      width 800
+      height 800
+      far 5
+      exposure 8
     }
     Lidar {
       translation 0.00553488 0 0.159904
-      rotation 0 -1 0 -0.0346
+      rotation 0 -1 0 0
       name "lidar2D"
       horizontalResolution 360
       fieldOfView 6.282
@@ -92,8 +93,8 @@ DEF ROBOT_1 Robot {
       maxRange 10
     }
     Lidar {
-      translation 0.13 0 0.3
-      rotation 0 -1 0 -0.0346
+      translation 0.13 0 0.25
+      rotation 0 1 0 0.041
       name "lidar3D"
       horizontalResolution 360
       fieldOfView 6.282
@@ -241,23 +242,23 @@ DEF ROBOT_1 Robot {
     }
     DEF CASTER_WHEEL HingeJoint {
       jointParameters HingeJointParameters {
-        position 3.5789366167573005
+        position 3.578887858224441
         axis 0 0 1
         anchor -0.1918 0 0
         staticFriction 1
       }
       endPoint Solid {
-        translation -0.19180092836867133 3.3202258281621717e-06 0.00012943463177877976
-        rotation -0.41034463544666133 -0.6448316745411236 -0.6448328400978326 3.920378617606634
+        translation -0.1918009282067809 3.3202710901165587e-06 0.00012943463177877865
+        rotation -0.41036300307998025 -0.6448258301888319 -0.6448269957317728 3.9204100585673767
         children [
           DEF casterWheelRim HingeJoint {
             jointParameters HingeJointParameters {
-              position -4882.396681037645
+              position -4882.021875872182
               anchor 0 -0.0521014 0.012843
             }
             endPoint Solid {
               translation 0 -0.0521014 0.012843
-              rotation 0.9999999999999999 0 0 5.921487948073213
+              rotation -1 0 0 6.270077500823019
               children [
                 DEF CASTER_WHEEL_RIM_SHAPE Shape {
                   appearance PBRAppearance {
@@ -396,7 +397,7 @@ DEF ROBOT_1 Robot {
     }
     DEF LEFT_WHEEL HingeJoint {
       jointParameters HingeJointParameters {
-        position 16.617892835187998
+        position 16.617912151259436
         axis 0 1 0
         anchor 0 0.165 0
       }
@@ -410,8 +411,8 @@ DEF ROBOT_1 Robot {
         }
       ]
       endPoint Solid {
-        translation -7.214682139329275e-05 0.1649999220967009 9.856711729130283e-05
-        rotation -0.6871829087462503 0.6871829651876448 -0.23571003857061054 2.678623248947574
+        translation -7.214491745035446e-05 0.1649999220967009 9.856851086607057e-05
+        rotation -0.6871841102148212 0.6871841666558172 -0.23570303300088075 2.6786365226344238
         children [
           DEF BLACK_CYLINDER_SHAPE Shape {
             appearance PBRAppearance {
@@ -579,7 +580,7 @@ DEF ROBOT_1 Robot {
     }
     DEF RIGHT_WHEEL HingeJoint {
       jointParameters HingeJointParameters {
-        position 10.890210568443628
+        position 10.890173974519822
         axis 0 1 0
         anchor 0 -0.165 0
       }
@@ -593,8 +594,8 @@ DEF ROBOT_1 Robot {
         }
       ]
       endPoint Solid {
-        translation -3.8454995562835734e-06 -0.16500007497486968 7.947174070304032e-06
-        rotation 0.7066157400843619 -0.7066157834102454 0.037260307306224864 3.2160787343808837
+        translation -3.845790371991126e-06 -0.16500007497486968 7.947033343065214e-06
+        rotation 0.7066153986760858 -0.7066154420026877 0.03727325418020972 3.216104592218776
         children [
           DEF RIGHT_BLACK_CYLINDER_SHAPE Shape {
             appearance PBRAppearance {

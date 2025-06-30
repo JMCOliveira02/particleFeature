@@ -538,7 +538,7 @@ double ParticleFilter::computeAngleLikelihood(double measured_angle, double expe
         error += 2 * M_PI;
 
     // double coeff = 1.0 / std::sqrt(2.0 * M_PI * sigma * sigma);
-    double exponent = -0.5 * (error * error) / (10 * sigma * sigma);
+    double exponent = -0.5 * (error * error) / (2 * sigma * sigma);
 
     return std::exp(exponent);
 }
@@ -830,8 +830,9 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
             likelihood += msg_likelihood * msg_likelihood * msg_likelihood;
         }
 
-        p.weight *= likelihood;
-
+        double learning_rate = 0.9; // How much to trust this measurement
+        double new_weight = p.weight * likelihood;
+        p.weight = learning_rate * new_weight + (1.0 - learning_rate) * p.weight;
     }
 
     RCLCPP_INFO(this->get_logger(), "Measurement before normalize!");

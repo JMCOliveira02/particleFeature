@@ -11,7 +11,7 @@ from launch.event_handlers import OnProcessExit
 from launch.events import Shutdown
 
 def generate_launch_description():
-    trial_type = "Nave_A_MM"
+    trial_type = "Nave_A_AMCL"
 
     # Waypoint Follower
     waypoint_file = f"/home/joao/ros2_ws/src/robot_waypoint_follower/robot_waypoint_follower/{trial_type}.yaml"
