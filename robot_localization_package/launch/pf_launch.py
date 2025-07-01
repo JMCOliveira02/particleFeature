@@ -1,6 +1,7 @@
 import os
 import launch
 from launch import LaunchDescription
+from launch.actions import ExecuteProcess
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 from webots_ros2_driver.webots_launcher import WebotsLauncher
@@ -8,6 +9,7 @@ from webots_ros2_driver.webots_controller import WebotsController
 from launch.actions import RegisterEventHandler
 from launch.event_handlers import OnProcessExit
 from launch.events import Shutdown
+
 
 
 def generate_launch_description():
@@ -18,6 +20,7 @@ def generate_launch_description():
 
     # World setup
     world_setup = "iilab_biltes"
+    trial_type = "Nave_A_MM"
     # Paths to files
     robot_urdf = os.path.join(worlds_dir, 'urdf', 'robot.urdf')
     world_file = os.path.join(worlds_dir, 'worlds',
@@ -65,8 +68,14 @@ def generate_launch_description():
         package='com_perception_package',
         executable='send_scan_node',
         name='send_scan_node',
-        output='screen'
+        output='screen',
+        parameters=[{
+            'enable_motion_detection': True,    # Set to False to disable motion detection (always send scans)
+            'scan_delta_distance': 0.02,        # Legacy parameter (not used with cmd_vel approach)
+            'scan_delta_angle': 0.05,           # Legacy parameter (not used with cmd_vel approach)
+        }]
     )
+
 
     recv_results = Node(
         package='com_perception_package',
@@ -108,7 +117,7 @@ def generate_launch_description():
         package='nav2_lifecycle_manager',
         executable='lifecycle_manager',
         name='lifecycle_manager_map',
-        parameters=[{'autostart': True, 'node_names': ['map_server']}],
+        parameters=[{'autostart': False, 'node_names': ['map_server']}],
         output='screen'
     )
 
@@ -124,9 +133,17 @@ def generate_launch_description():
         package='tf2_ros',
         executable='static_transform_publisher',
         name='base_to_lidar_broadcaster',
-        arguments=['0', '0', '0', '0', '0', '0',
+        arguments=['0', '0', '1', '0', '0', '0',
                    'base_footprint_real', 'lidar2D']
     )
+
+    tf_base_to_rgbd = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='base_to_rgbd_broadcaster',
+        arguments=["0", "0", "1", "0", "0.3", "0", "base_footprint_real", "rgbd3D"]
+    )
+    
 
     # RViz
     rviz = Node(
@@ -146,26 +163,42 @@ def generate_launch_description():
         prefix='gnome-terminal --'
     )
 
-    # Path Tracker
+ # Record and playback trajectory (not used)
+    ##Path Tracker
     path_tracker = Node(
         package='robot_worlds',
         executable='path_tracker',
         name='path_tracker',
+        parameters=[{'trial_type' : trial_type}], 
         output='screen'
     )
+
+    ## RosBag commander
+    recording_path = f"/home/biltes/ros_ws/recordings/{trial_type}"
+    rosbag_play = ExecuteProcess(
+        cmd=['ros2', 'bag', 'play', recording_path],
+        output='screen'
+    )
+    rosbag_record = ExecuteProcess(
+        cmd=['ros2', 'bag', 'record', '/cmd_vel', '-o', recording_path],
+        output='screen'
+    )
+
+
 
     return LaunchDescription([
         rviz,
         webots,
         robot_controller,
         # fake_detector,
-        # path_tracker,
+        path_tracker,
         # corner_detector,
         particle_filter,
         send_scan,
         recv_results,
         tf_map_to_odom,
         tf_base_to_lidar,
+        tf_base_to_rgbd,
         map_server,
         lifecycle_manager,
         teleop,

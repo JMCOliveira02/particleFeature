@@ -546,7 +546,7 @@ double ParticleFilter::computeAngleLikelihood(double measured_angle, double expe
         error += 2 * M_PI;
 
     // double coeff = 1.0 / std::sqrt(2.0 * M_PI * sigma * sigma);
-    double exponent = -0.5 * (error * error) / (10*sigma * sigma);
+    double exponent = -0.5 * (error * error) / (5*sigma * sigma);
 
     return std::exp(exponent);
 }
@@ -580,7 +580,7 @@ double ParticleFilter::computeLikelihoodFeature(const Particle &p, double delta_
 
     double expected_feature_angle = transformAngleToParticleFrame(best_feature.theta, scan_p_theta);
     double angle_likelihood = computeAngleLikelihood(measured_theta, expected_feature_angle, sigma_theta);
-    double distance_likelihood = (std::exp(-(min_dist * min_dist) / (2 * 2 * 2)));
+    double distance_likelihood = std::exp(-(min_dist * min_dist) / (2*2* 2));
     // RCLCPP_INFO(this->get_logger(), "min_dist: %.1f ", min_dist);
 
     // RCLCPP_INFO(this->get_logger(), "sigma_pos: %.1f ", sigma_pos);
@@ -862,11 +862,20 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
             p.y += delta_x_robot * std::sin(p.theta) + delta_y_robot * std::cos(p.theta) + noise_y(generator_);
             p.theta += delta_theta_odom + noise_theta(generator_);
 
+/*             bool penalize = !isParticleInFreeSpace(p.x, p.y, pgm, resolution, origin);
+            if (penalize)
+            {
+                p.weight *= 0.1; // Less harsh than /4
+            } */
+
             if (p.theta > M_PI)
                 p.theta -= 2 * M_PI;
             if (p.theta < -M_PI)
                 p.theta += 2 * M_PI;
         }
+
+
+
 
         last_odom_x_ = odom_x;
         last_odom_y_ = odom_y;
@@ -952,7 +961,7 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
             double sigma_x = std::sqrt(obs.covariance_pos[0][0]);
             double sigma_y = std::sqrt(obs.covariance_pos[1][1]);
             double sigma_theta = std::sqrt(obs.angle_variance);
-            double sigma_pos = std::sqrt((sigma_x * sigma_x + sigma_y * sigma_y)/2);
+            double sigma_pos = std::sqrt((sigma_x * sigma_x + sigma_y * sigma_y));
 
             std::normal_distribution<double> noise_pos(0.0, sigma_pos);
             std::normal_distribution<double> noise_theta(0.0, sigma_theta);
@@ -1026,7 +1035,6 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
     double ess = 1.0 / std::accumulate(particles_.begin(), particles_.end(), 0.0,
                                        [](double sum, const Particle &p)
                                        { return sum + (p.weight * p.weight); });
-
     RCLCPP_INFO(this->get_logger(), "📊 ESS Calculation: ESS=%.2f, num_particles=%d, ratio=%.3f", 
                 ess, static_cast<int>(num_particles_), ess/num_particles_);
 

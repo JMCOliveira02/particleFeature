@@ -13,7 +13,7 @@
             <rangeFinder>rangeFinder</rangeFinder>
             <topicName>/rbgd_cloud</topicName>
             <alwaysOn>true</alwaysOn>
-            <frameName>lidar2D</frameName>
+            <frameName>rgbd3D</frameName>
         </plugin>
     </webots>
 </robot>

@@ -1,85 +1,57 @@
 features:
 # === CHAIRS === 
   - type: chair
-    position: { x: -0.85, y: 7.73 }
-    orientation: { theta: -90 }
+    position: { x: -0.87, y: 7.52 }  # Updated position
+    orientation: { theta: 90 }
     
   - type: chair  
     position: { x: -1.19, y: 4.11 }
-    orientation: { theta: 45 }  
+    orientation: { theta: 0 }  # Complex rotation simplified
     
   - type: chair
-    position: { x: -3.64, y: 0.96 }
-    orientation: { theta: 90 }
-    
-  - type: chair
-    position: { x: -14.09, y: 7.67 }
+    position: { x: -3.64, y: 1.08 }  # Updated Y position
     orientation: { theta: -90 }
+    
+  - type: chair
+    position: { x: -14.73, y: 8.15 }  # Corrected position
+    orientation: { theta: 180 }  # Corrected rotation
     
   - type: chair  
-    position: { x: -15.65, y: 7.67 }
-    orientation: { theta: -90 }
-    
-  - type: chair
-    position: { x: -17.16, y: 7.67 }
-    orientation: { theta: -90 }
+    position: { x: -16.62, y: 8.12 }  # Corrected position 
+    orientation: { theta: 0 }  # Complex rotation simplified
     
   - type: chair
     position: { x: -17.69, y: 1.45 }
-    orientation: { theta: 45 } 
+    orientation: { theta: 0 }  # Complex rotation simplified
     
   - type: chair
-    position: { x: -17.84, y: 13.95 }
-    orientation: { theta: -90 }
-    
-  - type: chair
-    position: { x: -19.36, y: 13.95 }
-    orientation: { theta: -90 }
-    
-  - type: chair
-    position: { x: -9.47, y: 1.59 }
+    position: { x: -9.25, y: 1.51 }  # Updated position
     orientation: { theta: 180 }
 
   # === TABLES ===
   - type: table
     position: { x: -3.66, y: 0.54 }
-    orientation: { theta: -180 }  # -3.1415853071795863 rad
+    orientation: { theta: 180 }  # Corrected from -180
     
   - type: table
     position: { x: -0.87, y: 8.21 }
-    orientation: { theta: 180 }   # 3.14159 rad
+    orientation: { theta: 180 }
     
   - type: table
     position: { x: -0.60, y: 4.08 }
-    orientation: { theta: 90 }    # 1.5708 rad
+    orientation: { theta: 90 }
     
   - type: table
     position: { x: -10.01, y: 1.54 }
-    orientation: { theta: -90 }   # -1.5707953071795862 rad
-    
-  - type: table
-    position: { x: -14.07, y: 8.11 }
-    orientation: { theta: 15 }    # Complex rotation, approximately 15°
-    
-  - type: table
-    position: { x: -17.84, y: 13.44 }
-    orientation: { theta: 15 }    # Complex rotation, approximately 15°
-    
-  - type: table
-    position: { x: -19.33, y: 13.44 }
-    orientation: { theta: 15 }    # Complex rotation, approximately 15°
+    orientation: { theta: 90 }
     
   - type: table
     position: { x: -15.60, y: 8.11 }
-    orientation: { theta: 15 }    # Complex rotation, approximately 15°
+    orientation: { theta: 0 }  # Complex rotation approximated
     
   - type: table
     position: { x: -17.17, y: 1.50 }
-    orientation: { theta: -90 }   # -1.5707953071795862 rad
-    
-  - type: table
-    position: { x: -17.16, y: 8.11 }
-    orientation: { theta: 15 }    # Complex rotation, approximately 15°
+    orientation: { theta: -90 }
 
   # === DOOR ===
   - type: door

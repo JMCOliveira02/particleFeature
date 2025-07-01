@@ -6,16 +6,16 @@ particle_filter:
     # MOTION MODEL - Currently too aggressive
     motion_delta_distance: 0.1             # ⬇️ REDUCED: More sensitive to motion (was 0.1)
     motion_delta_angle: 0.1                # ⬇️ REDUCED: More sensitive to rotation (was 0.1)
-    motion_x_variance: 0.08                  # ⬇️ REDUCED: Less noise for stability (was 0.15)
-    motion_y_variance: 0.08                  # ⬇️ REDUCED: Less noise for stability (was 0.15)
-    motion_angle_variance: 0.05              # ⬇️ REDUCED: Less angular noise (was 0.08)
+    motion_x_variance: 0.01                # ⬇️ REDUCED: Less noise for stability (was 0.15)
+    motion_y_variance: 0.01                  # ⬇️ REDUCED: Less noise for stability (was 0.15)
+    motion_angle_variance: 0.01              # ⬇️ REDUCED: Less angular noise (was 0.08)
     
     # RESAMPLING - Much more conservative for stability
-    resample_ess_threshold: 0.5            # ⬇️ REDUCED: Only resample when ESS < 8% (was 10%)
+    resample_ess_threshold: 0.6            # ⬇️ REDUCED: Only resample when ESS < 8% (was 10%)
     
     # INJECTION - Much less aggressive
-    inject_num_iterations: 4                # ⬆️ INCREASED: Less frequent injection (was 4)
-    inject_percentage: 0.2                  # ⬇️ REDUCED: Smaller injection (was 20%!)
+    inject_num_iterations: 10                # ⬆️ INCREASED: Less frequent injection (was 4)
+    inject_percentage: 0.1                  # ⬇️ REDUCED: Smaller injection (was 20%!)
     replace_worst_percentage: 0.05           # ⬇️ REDUCED: Gentler replacement (was 5%)
     
     # POSE ESTIMATION - More particles for stability
