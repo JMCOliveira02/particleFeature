@@ -321,7 +321,7 @@ DEF ROBOT_1 Robot {
       width 300
       height 300
       minRange 0.4
-      maxRange 6
+      maxRange 5
     }
     Camera {
       translation 0 0 1.2
@@ -330,7 +330,7 @@ DEF ROBOT_1 Robot {
       width 300
       height 300
       near 0.4
-      far 6
+      far 5
     }
     Lidar {
       translation 0.00553488 0 0.159904

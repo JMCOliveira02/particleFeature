@@ -192,6 +192,9 @@ private:
     // Last estimated pose
     double last_odom_x_ = 0.0, last_odom_y_ = 0.0, last_odom_theta_ = 0.0;
     double last_update_x_ = 0.0, last_update_y_ = 0.0, last_update_theta_ = 0.0;
+    
+    // Separate tracking for pose estimation (to avoid interfering with motionUpdate)
+    double pose_last_odom_x_ = 0.0, pose_last_odom_y_ = 0.0, pose_last_odom_theta_ = 0.0;
 
     double x_last_final = 0.0, y_last_final = 0.0, theta_last_final = 0.0;
     double pose_covariance_[3] = { 0.0, 0.0, 0.0};    
@@ -231,6 +234,7 @@ private:
     void injectRandomParticles_pgm(double percentage);
 
     // Pose estimation
+    void updatePoseWithOdometry();
     void computeEstimatedPose();
     void publishEstimatedPose();
 

@@ -1,4 +1,5 @@
 #include "robot_worlds/PathTracker.hpp"
+#include <filesystem>  // For directory creation
 
 PathTracker::PathTracker() : Node("path_tracker"), tf_buffer_(this->get_clock()), tf_listener_(tf_buffer_) {
     RCLCPP_INFO(this->get_logger(), "PathTracker Constructor!");
@@ -26,20 +27,28 @@ PathTracker::PathTracker() : Node("path_tracker"), tf_buffer_(this->get_clock())
     std::stringstream filename;
     std::string trial_type;
 
-
     this->declare_parameter("trial_type", std::string(""));
     this->get_parameter("trial_type", trial_type);
 
-    filename << "/home/biltes/ros_ws/src/robot_worlds/trials/" << trial_type << "_";
+    // Create trials directory if it doesn't exist
+    std::string trials_dir = "/home/biltes/ros_ws/src/robot_worlds/trials";
+    try {
+        std::filesystem::create_directories(trials_dir);
+        RCLCPP_INFO(this->get_logger(), "Trials directory created/verified: %s", trials_dir.c_str());
+    } catch (const std::exception& e) {
+        RCLCPP_ERROR(this->get_logger(), "Failed to create trials directory: %s", e.what());
+    }
 
+    filename << trials_dir << "/" << trial_type << "_";
     filename << std::put_time(std::localtime(&time_t_now), "%Y-%m-%d_%H-%M") << ".csv";
 
     csv_file_.open(filename.str());
     csv_file_ << std::fixed << std::setprecision(3);
 
     if (!csv_file_.is_open()) {
-        RCLCPP_ERROR(this->get_logger(), "Failed to open CSV file for writing.");
+        RCLCPP_ERROR(this->get_logger(), "Failed to open CSV file for writing: %s", filename.str().c_str());
     } else {
+        RCLCPP_INFO(this->get_logger(), "CSV file opened successfully: %s", filename.str().c_str());
         csv_file_ << "timestamp_real, timestamp_est, real_x, real_y, real_theta, est_x, est_y, est_theta, cov_x, cov_y, cov_theta\n";
     }
 
@@ -56,9 +65,17 @@ void PathTracker::updatePathForFrame(const std::string& frame_id, nav_msgs::msg:
 {
     geometry_msgs::msg::TransformStamped tf;
     try {
-        tf = tf_buffer_.lookupTransform("map", frame_id, tf2::TimePointZero);
+        // Use a small timeout instead of TimePointZero for better reliability
+        tf = tf_buffer_.lookupTransform("map", frame_id, tf2::TimePointZero, tf2::durationFromSec(0.1));
     } catch (tf2::TransformException &ex) {
-        RCLCPP_WARN(this->get_logger(), "tf [%s] is not available!, error: %s", frame_id.c_str(), ex.what());
+        // Only warn every 5 seconds to reduce log spam
+        static auto last_warn_time = this->get_clock()->now();
+        auto current_time = this->get_clock()->now();
+        if ((current_time - last_warn_time).seconds() >= 5.0) {
+            RCLCPP_WARN(this->get_logger(), "tf [%s] → [map] not available! Error: %s", frame_id.c_str(), ex.what());
+            RCLCPP_INFO(this->get_logger(), "Available frames: %s", tf_buffer_.allFramesAsString().c_str());
+            last_warn_time = current_time;
+        }
         return;
     }
 

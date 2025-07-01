@@ -117,7 +117,7 @@ def generate_launch_description():
         package='nav2_lifecycle_manager',
         executable='lifecycle_manager',
         name='lifecycle_manager_map',
-        parameters=[{'autostart': False, 'node_names': ['map_server']}],
+        parameters=[{'autostart': True, 'node_names': ['map_server']}],
         output='screen'
     )
 
@@ -163,7 +163,7 @@ def generate_launch_description():
         prefix='gnome-terminal --'
     )
 
- # Record and playback trajectory (not used)
+    # Record and playback trajectory (not used)
     ##Path Tracker
     path_tracker = Node(
         package='robot_worlds',
@@ -173,7 +173,7 @@ def generate_launch_description():
         output='screen'
     )
 
-    ## RosBag commander
+    """     ## RosBag commander
     recording_path = f"/home/biltes/ros_ws/recordings/{trial_type}"
     rosbag_play = ExecuteProcess(
         cmd=['ros2', 'bag', 'play', recording_path],
@@ -182,7 +182,7 @@ def generate_launch_description():
     rosbag_record = ExecuteProcess(
         cmd=['ros2', 'bag', 'record', '/cmd_vel', '-o', recording_path],
         output='screen'
-    )
+    ) """
 
 
 

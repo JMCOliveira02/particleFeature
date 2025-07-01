@@ -19,4 +19,4 @@ particle_filter:
     replace_worst_percentage: 0.05           # ⬇️ REDUCED: Gentler replacement (was 5%)
     
     # POSE ESTIMATION - More particles for stability
-    estimate_num_particles: 2000               # ⬆️ INCREASED: Use more particles (was 10)
+    estimate_num_particles: 100              # ⬆️ INCREASED: Use more particles (was 10)
