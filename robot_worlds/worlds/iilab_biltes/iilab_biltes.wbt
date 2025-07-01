@@ -314,19 +314,19 @@ DEF ROBOT_1 Robot {
   rotation 0.02063152122255651 -0.0027089277014204966 0.9997834775803967 1.5707903061004251
   children [
     RangeFinder {
-      translation 0 0 1
+      translation 0 0 1.2
       rotation 0 1 0 0.3
       name "rangeFinder"
-      fieldOfView 1.2
+      fieldOfView 1
       width 300
       height 300
       minRange 0.4
       maxRange 6
     }
     Camera {
-      translation 0 0 1
+      translation 0 0 1.2
       rotation 0 1 0 0.3
-      fieldOfView 1.2
+      fieldOfView 1
       width 300
       height 300
       near 0.4

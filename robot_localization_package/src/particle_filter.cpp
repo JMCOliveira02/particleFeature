@@ -1150,7 +1150,6 @@ void ParticleFilter::resampleParticles(ResamplingAmount type, ResamplingMethod m
     }
 }
 
-// compute the estimated pose based on the top-weighted particles
 void ParticleFilter::computeEstimatedPose()
 {
     if (particles_.empty())

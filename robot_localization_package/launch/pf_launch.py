@@ -141,7 +141,7 @@ def generate_launch_description():
         package='tf2_ros',
         executable='static_transform_publisher',
         name='base_to_rgbd_broadcaster',
-        arguments=["0", "0", "1", "0", "0.3", "0", "base_footprint_real", "rgbd3D"]
+        arguments=["0", "0", "1.2", "0", "0.3", "0", "base_footprint_real", "rgbd3D"]
     )
     
 
