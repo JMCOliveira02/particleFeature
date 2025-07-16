@@ -71,8 +71,17 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             'enable_motion_detection': True,    # Set to False to disable motion detection (always send scans)
-            'scan_delta_distance': 0.02,        # Legacy parameter (not used with cmd_vel approach)
-            'scan_delta_angle': 0.05,           # Legacy parameter (not used with cmd_vel approach)
+        }]
+    )
+    
+    fusion_node = Node(
+        package='sensor_fusion',
+        executable='dual_rgbd_fusion_node',
+        parameters=[{
+            'enable_motion_detection': True,
+            'enable_timing_debug': True,
+            'voxel_size': 0.02,
+            'enable_debug_ply': True,
         }]
     )
 
@@ -137,11 +146,17 @@ def generate_launch_description():
                    'base_footprint_real', 'lidar2D']
     )
 
-    tf_base_to_rgbd = Node(
+    tf_base_to_rgbd_0 = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
-        name='base_to_rgbd_broadcaster',
-        arguments=["0", "0", "1.2", "0", "0.3", "0", "base_footprint_real", "rgbd3D"]
+        name='base_to_rgbd_0_broadcaster',
+        arguments=["0", "0", "1.2", "0", "0.4", "0", "base_footprint_real", "rgbd_0"]
+    )
+    tf_base_to_rgbd_1 = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='base_to_rgbd_1_broadcaster',
+        arguments=["0", "0", "1.2", "0", "-0.4", "0", "base_footprint_real", "rgbd_1"]
     )
     
 
@@ -194,11 +209,13 @@ def generate_launch_description():
         path_tracker,
         # corner_detector,
         particle_filter,
-        send_scan,
+        #send_scan,
+        fusion_node,
         recv_results,
         tf_map_to_odom,
-        tf_base_to_lidar,
-        tf_base_to_rgbd,
+        #tf_base_to_lidar,
+        tf_base_to_rgbd_0,
+        tf_base_to_rgbd_1,
         map_server,
         lifecycle_manager,
         teleop,

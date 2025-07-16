@@ -9,11 +9,18 @@
         </device>
         <plugin type="robot_controller::RobotController" />
         <plugin type="webots_ros2_driver::Ros2RGBD">
-            <camera>camera</camera>
-            <rangeFinder>rangeFinder</rangeFinder>
-            <topicName>/rbgd_cloud</topicName>
+            <camera>camera_0</camera>
+            <rangeFinder>rangeFinder_0</rangeFinder>
+            <topicName>/rgbd_cloud_0</topicName>
             <alwaysOn>true</alwaysOn>
-            <frameName>rgbd3D</frameName>
+            <frameName>rgbd_0</frameName>
+        </plugin>
+        <plugin type="webots_ros2_driver::Ros2RGBD">
+            <camera>camera_1</camera>
+            <rangeFinder>rangeFinder_1</rangeFinder>
+            <topicName>/rgbd_cloud_1</topicName>  
+            <alwaysOn>true</alwaysOn>
+            <frameName>rgbd_1</frameName>                                                                       
         </plugin>
     </webots>
 </robot>

@@ -24,6 +24,8 @@
 #include <array>
 #include <string>
 #include <cmath>
+#include <sstream>
+#include <iomanip>
 
 #define NUM_PARTICLES 100.0
 
@@ -161,9 +163,11 @@ private:
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_pub_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr particles_color_pub_;
     rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr particles_no_color_pub_;
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr feature_map_pub_;  // ✅ Add feature map visualization
     rclcpp::Subscription<robot_msgs::msg::FeatureArray>::SharedPtr feature_sub_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
     rclcpp::TimerBase::SharedPtr timer_pose_;
+    rclcpp::TimerBase::SharedPtr timer_feature_map_;  // ✅ Add timer for feature map publishing
     std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
@@ -241,6 +245,7 @@ private:
     // Particle visualization
     void publishParticles_with_color();
     void publishParticles_no_color();
+    void publishFeatureMapMarkers();
 
     
     // Feature handling

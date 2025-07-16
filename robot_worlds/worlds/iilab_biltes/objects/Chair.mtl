@@ -16,14 +16,18 @@
 # Kd 0.0 1.0 0.0  # Green
 
 newmtl Material__25_1.001
-Ns 0.000000
-Ka 0.010000 0.010000 0.010000
+Ns 25.000000
+Ka 0.2 0.2 0.2
 Kd 0.020000 0.020000 0.020000  # Almost black fabric
-Ks 0.000000 0.000000 0.000000  # No shine
+Ks 0.1 0.1 0.1
 Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
-illum 1
+illum 2
 
 newmtl Material__26_1.001
+Ka 0.2 0.2 0.2
 Kd 0.3 0.3 0.3  # Metallic dark grey
+Ks 0.3 0.3 0.3
+Ns 50.0
+illum 2

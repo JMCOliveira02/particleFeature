@@ -1,22 +1,22 @@
 particle_filter:
   ros__parameters:
-    # PARTICLE COUNT - Good for robustness
-    num_particles: 2000.0       
+    # PARTICLE COUNT - Much higher for extreme robustness
+    num_particles: 4000.0       
     
-    # MOTION MODEL - Currently too aggressive
-    motion_delta_distance: 0.1             # ⬇️ REDUCED: More sensitive to motion (was 0.1)
-    motion_delta_angle: 0.1                # ⬇️ REDUCED: More sensitive to rotation (was 0.1)
-    motion_x_variance: 0.02                # ⬇️ REDUCED: Less noise for stability (was 0.15)
-    motion_y_variance: 0.02                  # ⬇️ REDUCED: Less noise for stability (was 0.15)
-    motion_angle_variance: 0.02              # ⬇️ REDUCED: Less angular noise (was 0.08)
+    # MOTION MODEL - HYPER AGGRESSIVE for max convergence
+    motion_delta_distance: 0.01            # � HYPER: Update every 1mm!
+    motion_delta_angle: 0.01               # � HYPER: Update every 0.06 degrees!
+    motion_x_variance: 0.006                # � HYPER: Extremely tight motion model
+    motion_y_variance: 0.006                # � HYPER: Extremely tight motion model
+    motion_angle_variance: 0.006            # � HYPER: Extremely tight angular model
     
-    # RESAMPLING - Much more conservative for stability
-    resample_ess_threshold: 0.6            # ⬇️ REDUCED: Only resample when ESS < 8% (was 10%)
+    # RESAMPLING - HYPER AGGRESSIVE for fastest convergence
+    resample_ess_threshold: 0.6           # � HYPER: Resample when ESS < 80%!!
     
-    # INJECTION - Much less aggressive
-    inject_num_iterations: 10                # ⬆️ INCREASED: Less frequent injection (was 4)
-    inject_percentage: 0.05                  # ⬇️ REDUCED: Smaller injection (was 20%!)
-    replace_worst_percentage: 0.05           # ⬇️ REDUCED: Gentler replacement (was 5%)
+    # INJECTION - HYPER AGGRESSIVE 
+    inject_num_iterations: 10                # � HYPER: Inject almost every iteration!
+    inject_percentage: 0.2                 # � HYPER: Massive 15% injection!
+    replace_worst_percentage: 0.1          # � HYPER: Replace 15% worst particles!
     
-    # POSE ESTIMATION - More particles for stability
-    estimate_num_particles: 100              # ⬆️ INCREASED: Use more particles (was 10)
+    # POSE ESTIMATION - Use fewer but best particles for fast convergence
+    estimate_num_particles: 1000              # � HYPER: Use only best particles

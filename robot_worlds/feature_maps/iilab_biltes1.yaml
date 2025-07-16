@@ -1,0 +1,198 @@
+features:
+# === CHAIRS === 
+  - type: chair
+    position: { x: -0.87, y: 7.52 }
+    orientation: { theta: 90 }  # rotation: -1.5707953071795862 (but coordinate convention gives +90)
+    
+  - type: chair  
+    position: { x: -1.20, y: 4.11 }
+    orientation: { theta: 0 }  # Complex rotation, approximately 0
+    
+  - type: chair
+    position: { x: -3.64, y: 1.08 }
+    orientation: { theta: -90 }  # rotation: 1.57079 (but coordinate convention gives -90)
+    
+  - type: chair
+    position: { x: -14.73, y: 8.15 }
+    orientation: { theta: 180 }  # rotation: -3.1415853071795863
+    
+  - type: chair  
+    position: { x: -16.62, y: 8.12 }
+    orientation: { theta: 0 }  # Complex rotation, approximately 0
+    
+  - type: chair
+    position: { x: -17.69, y: 1.45 }
+    orientation: { theta: 0 }  # Complex rotation, approximately 0
+    
+  - type: chair
+    position: { x: -9.25, y: 1.51 }
+    orientation: { theta: 180 }  # rotation: 3.14159
+
+  # === TABLES ===
+  - type: table
+    position: { x: -3.66, y: 0.65 }  # Updated Y from 0.650001
+    orientation: { theta: 180 }  # rotation: -3.1415853071795863
+    
+  - type: table
+    position: { x: -0.87, y: 8.21 }
+    orientation: { theta: 180 }  # rotation: 3.14159
+    
+  - type: table
+    position: { x: -0.65, y: 4.08 }  # Updated X from -0.60 to -0.6499
+    orientation: { theta: 90 }  # rotation: 1.5708
+    
+  - type: table
+    position: { x: -10.01, y: 1.54 }
+    orientation: { theta: -90 }  # rotation: -1.5707953071795862
+    
+  - type: table
+    position: { x: -15.60, y: 8.11 }
+    orientation: { theta: 0 }  # Complex rotation, approximately 0
+    
+  - type: table
+    position: { x: -17.17, y: 1.50 }
+    orientation: { theta: -90 }  # rotation: -1.5707953071795862
+
+  # === DOORS ===
+  - type: door
+    position: { x: -18.13, y: 18.98 }
+    orientation: { theta: 0 }
+
+  # === SLIDING DOORS ===
+  - type: door_sliding
+    position: { x: -4.12, y: 8.82 }
+    orientation: { theta: 0 }
+
+  - type: door_sliding
+    position: { x: -21.82, y: 8.82 }
+    orientation: { theta: 0 }
+
+  - type: door_sliding
+    position: { x: -21.82, y: 12.87 }
+    orientation: { theta: 0 }
+
+  # === WINDOWS ===
+  # Regular windows (built into building structure)
+  - type: window
+    position: { x: -1.58, y: 0.09 }
+    orientation: { theta: 0 }
+
+  - type: window
+    position: { x: -19.6, y: 0.1 }
+    orientation: { theta: 0 }
+
+  - type: window
+    position: { x: -25.58, y: 0.11 }
+    orientation: { theta: 0 }
+
+  - type: window
+    position: { x: -7.59, y: 0.09 }
+    orientation: { theta: 0 }
+
+  - type: window
+    position: { x: -25.52, y: 21.55 }
+    orientation: { theta: 180 }
+
+  # Big windows (window_big.obj)
+  - type: window_big
+    position: { x: -15.41, y: 8.78 }
+    orientation: { theta: 1 }
+
+  - type: window_big
+    position: { x: -17.81, y: 8.78 }
+    orientation: { theta: 1 }
+
+  - type: window_big
+    position: { x: -21.06, y: 18.93 }
+    orientation: { theta: 1 }
+
+  - type: window_big
+    position: { x: -17.81, y: 12.90 }
+    orientation: { theta: 1 }
+
+  - type: window_big
+    position: { x: -11.76, y: 8.77 }
+    orientation: { theta: 1 }
+
+  - type: window_big
+    position: { x: -9.39, y: 8.77 }
+    orientation: { theta: 1 }
+
+  # Small windows (window_small.obj)
+  - type: window_small
+    position: { x: -30.00, y: 18.17 }
+    orientation: { theta: 0 }
+
+  # === RECTANGULAR COLUMNS (square_column objects) ===
+  - type: column
+    position: { x: -4.49, y: 2.7 }
+    orientation: { theta: 0 }
+
+  - type: column
+    position: { x: -4.61, y: 0.15 }
+    orientation: { theta: 0 }
+
+  - type: column
+    position: { x: -10.64, y: 2.65 }
+    orientation: { theta: 0 }
+
+  - type: column
+    position: { x: -16.52, y: 2.65 }
+    orientation: { theta: 0 }
+
+  - type: column
+    position: { x: -22.63, y: 2.72 }
+    orientation: { theta: 0 }
+
+  - type: column
+    position: { x: -22.59, y: 0.16 }
+    orientation: { theta: 0 }
+
+  - type: column
+    position: { x: -22.62, y: 18.88 }
+    orientation: { theta: 0 }
+
+  - type: column
+    position: { x: -28.61, y: 18.99 }
+    orientation: { theta: 0 }
+
+  - type: column
+    position: { x: -24.85, y: 9.35 }
+    orientation: { theta: 0 }
+
+  # === CIRCULAR COLUMNS (round_column objects) ===
+  - type: column_circular
+    position: { x: -22.57, y: 12.08 }
+    orientation: { theta: 0 }
+
+  - type: column_circular
+    position: { x: -16.58, y: 12.08 }
+    orientation: { theta: 0 }
+
+  - type: column_circular
+    position: { x: -10.59, y: 12.08 }
+    orientation: { theta: 0 }
+
+  - type: column_circular
+    position: { x: -4.57, y: 12.08 }
+    orientation: { theta: 0 }
+
+  - type: column_circular
+    position: { x: 0.03, y: 12.08 }
+    orientation: { theta: 0 }
+
+  - type: column_circular
+    position: { x: -22.58, y: 9.58 }
+    orientation: { theta: 0 }
+
+  - type: column_circular
+    position: { x: -16.58, y: 9.58 }
+    orientation: { theta: 0 }
+
+  - type: column_circular
+    position: { x: -4.59, y: 9.58 }
+    orientation: { theta: 0 }
+
+  - type: column_circular
+    position: { x: 0.02, y: 9.58 }
+    orientation: { theta: 0 }

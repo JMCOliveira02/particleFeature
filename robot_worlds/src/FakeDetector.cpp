@@ -131,6 +131,7 @@ void KeypointDetector::publishTransformedFeatures(const geometry_msgs::msg::Tran
         feature_msg.orientation_variance = noise_angle * noise_angle;
 
         feature_msg.type = feature_map->type;
+        feature_msg.with_angle = true;  // ✅ FakeDetector always provides reliable angles
 
         feature_msg.confidence = 0.95;
 

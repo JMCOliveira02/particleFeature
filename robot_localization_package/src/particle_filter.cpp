@@ -125,12 +125,16 @@ ParticleFilter::ParticleFilter() : Node("particle_filter"),
     pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/estimated_pose", 10);
     particles_color_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/particles_color", 10);
     particles_no_color_pub_ = this->create_publisher<geometry_msgs::msg::PoseArray>("/particles_no_color", 10);
+    feature_map_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/feature_map_markers", 10);
 
     // Create a transform broadcaster
     tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
 
     // Create a timer to publish the estimated pose and particles
     timer_pose_ = create_wall_timer(std::chrono::milliseconds(500), std::bind(&ParticleFilter::publishEstimatedPose, this));
+    
+    // Create a timer to publish the feature map markers for visualization
+    timer_feature_map_ = create_wall_timer(std::chrono::milliseconds(2000), std::bind(&ParticleFilter::publishFeatureMapMarkers, this));
 
     // Initialize the color pallete for the particles weights
     computeColorWeightLookup();
@@ -364,6 +368,163 @@ void ParticleFilter::publishParticles_no_color()
     particles_no_color_pub_->publish(pose_array);
 }
 
+void ParticleFilter::publishFeatureMapMarkers()
+{
+    if (global_features_.empty())
+        return;
+
+    visualization_msgs::msg::MarkerArray marker_array;
+
+    // Clear existing markers first
+    visualization_msgs::msg::Marker clear_marker;
+    clear_marker.header.frame_id = "map";
+    clear_marker.header.stamp = this->get_clock()->now();
+    clear_marker.ns = "feature_map";
+    clear_marker.action = visualization_msgs::msg::Marker::DELETEALL;
+    marker_array.markers.push_back(clear_marker);
+
+    // Add markers for each feature in the global map
+    int marker_id = 0;
+    for (const auto& feature_ptr : global_features_)
+    {
+        visualization_msgs::msg::Marker marker;
+        marker.header.frame_id = "map";
+        marker.header.stamp = this->get_clock()->now();
+        marker.ns = "feature_map";
+        marker.id = marker_id++;
+        marker.action = visualization_msgs::msg::Marker::ADD;
+        marker.lifetime = rclcpp::Duration(0, 0); // Never expire
+
+        // Set position
+        marker.pose.position.x = feature_ptr->x;
+        marker.pose.position.y = feature_ptr->y;
+        marker.pose.position.z = 0.5; // Raise it a bit above ground for visibility
+
+        // Set orientation - convert from degrees to radians
+        tf2::Quaternion q;
+        // Most features have meaningful orientation, only circular columns don't
+        bool has_angle = (feature_ptr->type != "column_circular");
+        if (has_angle)
+        {
+            // Convert degrees to radians for tf2
+            double theta_radians = feature_ptr->theta * M_PI / 180.0;
+            q.setRPY(0, 0, theta_radians);
+            RCLCPP_DEBUG(this->get_logger(), "Feature %s at (%.2f, %.2f) with angle %.1f° (%.3f rad)", 
+                        feature_ptr->type.c_str(), feature_ptr->x, feature_ptr->y, 
+                        feature_ptr->theta, theta_radians);
+        }
+        else
+        {
+            q.setRPY(0, 0, 0);
+            RCLCPP_DEBUG(this->get_logger(), "Feature %s at (%.2f, %.2f) without angle (circular column)", 
+                        feature_ptr->type.c_str(), feature_ptr->x, feature_ptr->y);
+        }
+        marker.pose.orientation = tf2::toMsg(q);
+
+        // Set marker type and appearance based on feature type - all as arrows
+        marker.type = visualization_msgs::msg::Marker::ARROW;
+        
+        if (feature_ptr->type == "column" || feature_ptr->type == "column_circular")
+        {
+            // Green arrows for columns
+            marker.scale.x = 0.8;  // length
+            marker.scale.y = 0.15; // width
+            marker.scale.z = 0.15; // height
+            
+            marker.color.r = 0.0;
+            marker.color.g = 1.0;
+            marker.color.b = 0.0;
+            marker.color.a = 0.8;
+        }
+        else if (feature_ptr->type == "window" || feature_ptr->type == "window_big" || feature_ptr->type == "window_small")
+        {
+            // Blue arrows for windows - longer to show orientation clearly
+            marker.scale.x = 1.2;  // length
+            marker.scale.y = 0.1;  // width
+            marker.scale.z = 0.1;  // height
+            
+            marker.color.r = 0.0;
+            marker.color.g = 0.0;
+            marker.color.b = 1.0;
+            marker.color.a = 0.8;
+        }
+        else if (feature_ptr->type == "chair")
+        {
+            // Purple arrows for chairs
+            marker.scale.x = 0.6;  // length
+            marker.scale.y = 0.08; // width
+            marker.scale.z = 0.08; // height
+            
+            marker.color.r = 0.5;
+            marker.color.g = 0.0;
+            marker.color.b = 0.5;
+            marker.color.a = 0.8;
+        }
+        else if (feature_ptr->type == "table")
+        {
+            // Orange arrows for tables
+            marker.scale.x = 1.0;  // length
+            marker.scale.y = 0.12; // width
+            marker.scale.z = 0.12; // height
+            
+            marker.color.r = 1.0;
+            marker.color.g = 0.5;
+            marker.color.b = 0.0;
+            marker.color.a = 0.8;
+        }
+        else
+        {
+            // Red arrows for unknown types
+            marker.scale.x = 0.6;  // length
+            marker.scale.y = 0.1;  // width
+            marker.scale.z = 0.1;  // height
+            
+            marker.color.r = 1.0;
+            marker.color.g = 0.0;
+            marker.color.b = 0.0;
+            marker.color.a = 0.8;
+        }
+
+        // Add text label above the marker
+        marker_array.markers.push_back(marker);
+
+        // Create text marker for label
+        visualization_msgs::msg::Marker text_marker;
+        text_marker.header.frame_id = "map";
+        text_marker.header.stamp = this->get_clock()->now();
+        text_marker.ns = "feature_map_labels";
+        text_marker.id = marker_id++;
+        text_marker.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
+        text_marker.action = visualization_msgs::msg::Marker::ADD;
+        text_marker.lifetime = rclcpp::Duration(0, 0);
+
+        text_marker.pose.position.x = feature_ptr->x;
+        text_marker.pose.position.y = feature_ptr->y;
+        text_marker.pose.position.z = 1.5; // Above the main marker
+
+        text_marker.scale.z = 0.3; // Text size
+        text_marker.color.r = 1.0;
+        text_marker.color.g = 1.0;
+        text_marker.color.b = 1.0;
+        text_marker.color.a = 1.0;
+
+        std::stringstream label_stream;
+        label_stream << feature_ptr->type;
+        if (has_angle)
+        {
+            label_stream << " (" << std::fixed << std::setprecision(0) 
+                        << feature_ptr->theta << "°)";  // Show original degrees value
+        }
+        text_marker.text = label_stream.str();
+
+        marker_array.markers.push_back(text_marker);
+    }
+
+    feature_map_pub_->publish(marker_array);
+    
+    RCLCPP_DEBUG(this->get_logger(), "Published %zu feature map markers", global_features_.size());
+}
+
 // replace the worst particles with random ones in white part of pgm (free space)
 void ParticleFilter::replaceWorstParticles_pgm(double percentage)
 {
@@ -428,7 +589,7 @@ void ParticleFilter::storeMapMessage(const robot_msgs::msg::FeatureArray::Shared
     // Received Features
     last_map_msg_ = msg;
 
-    // Calculate motion since last measurement update
+    /* // Calculate motion since last measurement update
     double delta_x = odom_x - last_update_x_;
     double delta_y = odom_y - last_update_y_;
     double delta_theta = std::abs(odom_theta - last_update_theta_);
@@ -439,22 +600,22 @@ void ParticleFilter::storeMapMessage(const robot_msgs::msg::FeatureArray::Shared
                  
     // Only do measurement update if we've moved enough
     if (delta_distance > motion_delta_distance_ || delta_theta > motion_delta_angle_)
-    {
-        RCLCPP_INFO(this->get_logger(), "🔄 Measurement update! Moved %.3fm, rotated %.3f rad since last update", 
-                    delta_distance, delta_theta);
-        RCLCPP_INFO(this->get_logger(), "   Processing %zu features", msg->features.size());
-        
-        // Perform measurement update
-        measurementUpdate(last_map_msg_);
-        
-        // Update the last positions where we did a measurement
-        last_update_x_ = odom_x;
-        last_update_y_ = odom_y;
-        last_update_theta_ = odom_theta;
-    } else {
+    { */
+    //RCLCPP_INFO(this->get_logger(), "🔄 Measurement update! Moved %.3fm, rotated %.3f rad since last update", 
+    //            delta_distance, delta_theta);
+    RCLCPP_INFO(this->get_logger(), "   Processing %zu features", msg->features.size());
+    
+    // Perform measurement update
+    measurementUpdate(last_map_msg_);
+    
+    /* // Update the last positions where we did a measurement
+    last_update_x_ = odom_x;
+    last_update_y_ = odom_y;
+    last_update_theta_ = odom_theta; */
+    /* } else {
         RCLCPP_DEBUG(this->get_logger(), "Not enough motion for measurement update (%.3fm < %.3fm)", 
                      delta_distance, motion_delta_distance_);
-    }
+    } */
 
 }
 
@@ -485,7 +646,7 @@ std::vector<map_features::Feature> ParticleFilter::getExpectedFeatures(const Par
 
             double map_x = object_ptr->x;
             double map_y = object_ptr->y;
-            double feature_theta = object_ptr->theta;
+            double feature_theta = object_ptr->theta * M_PI / 180.0;  // Convert degrees to radians
 
             double particle_x = cos_theta * (map_x - scan_p_x) + sin_theta * (map_y - scan_p_y);
             double particle_y = -sin_theta * (map_x - scan_p_x) + cos_theta * (map_y - scan_p_y);
@@ -500,29 +661,41 @@ std::vector<map_features::Feature> ParticleFilter::getExpectedFeatures(const Par
 // transform angle from the map frame to the particle frame
 double ParticleFilter::transformAngleToParticleFrame(double feature_theta_map, double particle_theta)
 {
+    // DEBUG: Log input angles
+    RCLCPP_DEBUG(this->get_logger(), "ANGLE_DEBUG: transformAngleToParticleFrame - Input: feature_theta_map=%.3f rad (%.1f°), particle_theta=%.3f rad (%.1f°)", 
+                feature_theta_map, feature_theta_map * 180.0 / M_PI, particle_theta, particle_theta * 180.0 / M_PI);
 
-    // print the theta of the feature and the particle
-    // RCLCPP_INFO(this->get_logger(), "Feature theta: %.2f, Particle theta: %.2f", feature_theta_map, particle_theta);
-
+    // Normalize particle angle to [-π, π]
     if (particle_theta < -M_PI)
         particle_theta += 2 * M_PI;
     else if (particle_theta > M_PI)
         particle_theta -= 2 * M_PI;
 
-    feature_theta_map = feature_theta_map * (M_PI / 180.0);
+    // ✅ FIXED: feature_theta_map is already in radians from our messages
+    // Don't convert from degrees anymore: feature_theta_map = feature_theta_map * (M_PI / 180.0);
+    // Normalize feature angle to [-π, π]
     if (feature_theta_map < -M_PI)
         feature_theta_map += 2 * M_PI;
     else if (feature_theta_map > M_PI)
         feature_theta_map -= 2 * M_PI;
 
-    // compute the angle between the feature and the particle
+    // DEBUG: Log normalized angles
+    RCLCPP_DEBUG(this->get_logger(), "ANGLE_DEBUG: After normalization: feature_theta_map=%.3f rad (%.1f°), particle_theta=%.3f rad (%.1f°)", 
+                feature_theta_map, feature_theta_map * 180.0 / M_PI, particle_theta, particle_theta * 180.0 / M_PI);
 
+    // compute the angle between the feature and the particle
     double angle = feature_theta_map - particle_theta;
+
+    // DEBUG: Log initial angle difference
+    RCLCPP_DEBUG(this->get_logger(), "ANGLE_DEBUG: Initial angle difference: %.3f rad (%.1f°)", angle, angle * 180.0 / M_PI);
 
     while (angle > M_PI)
         angle -= 2 * M_PI;
     while (angle < -M_PI)
         angle += 2 * M_PI;
+
+    // DEBUG: Log final transformed angle
+    RCLCPP_DEBUG(this->get_logger(), "ANGLE_DEBUG: Final transformed angle: %.3f rad (%.1f°)", angle, angle * 180.0 / M_PI);
 
     return angle;
 }
@@ -530,6 +703,10 @@ double ParticleFilter::transformAngleToParticleFrame(double feature_theta_map, d
 // compute the likelihood for the orientation of the corner feature
 double ParticleFilter::computeAngleLikelihood(double measured_angle, double expected_angle, double sigma)
 {
+    // DEBUG: Log input angles
+    RCLCPP_DEBUG(this->get_logger(), "ANGLE_DEBUG: computeAngleLikelihood - Input: measured_angle=%.3f rad (%.1f°), expected_angle=%.3f rad (%.1f°), sigma=%.3f", 
+                measured_angle, measured_angle * 180.0 / M_PI, expected_angle, expected_angle * 180.0 / M_PI, sigma);
+
     if (measured_angle > M_PI)
         measured_angle -= 2 * M_PI;
     if (measured_angle < -M_PI)
@@ -541,15 +718,26 @@ double ParticleFilter::computeAngleLikelihood(double measured_angle, double expe
 
     double error = measured_angle - expected_angle;
 
+    // DEBUG: Log initial error
+    RCLCPP_DEBUG(this->get_logger(), "ANGLE_DEBUG: Initial angle error: %.3f rad (%.1f°)", error, error * 180.0 / M_PI);
+
     while (error > M_PI)
         error -= 2 * M_PI;
     while (error < -M_PI)
         error += 2 * M_PI;
 
-    // double coeff = 1.0 / std::sqrt(2.0 * M_PI * sigma * sigma);
-    double exponent = -0.5 * (error * error) / (10*sigma * sigma);
+    // DEBUG: Log normalized error
+    RCLCPP_DEBUG(this->get_logger(), "ANGLE_DEBUG: Normalized angle error: %.3f rad (%.1f°)", error, error * 180.0 / M_PI);
 
-    return std::exp(exponent);
+    // double coeff = 1.0 / std::sqrt(2.0 * M_PI * sigma * sigma);
+    // ✅ FIXED: Remove the 10* multiplier that was making angle variance too large
+    double exponent = -0.5 * (error * error) / (sigma * sigma);
+    double likelihood = std::exp(exponent);
+
+    // DEBUG: Log likelihood computation
+    RCLCPP_DEBUG(this->get_logger(), "ANGLE_DEBUG: Likelihood computation: exponent=%.3f, likelihood=%.6f", exponent, likelihood);
+
+    return likelihood;
 }
 
 // compute the likelihood of a corner feature based on distance and angle
@@ -557,18 +745,31 @@ double ParticleFilter::computeLikelihoodFeature(const Particle &p, double delta_
 {
     std::vector<map_features::Feature> expected_features = getExpectedFeatures(p,delta_scan_x, delta_scan_y, delta_scan_theta, type);
 
+    // DEBUG: Log particle and feature details
+    RCLCPP_DEBUG(this->get_logger(), "LIKELIHOOD_DEBUG: Particle at (%.3f, %.3f, %.1f°), feature type='%s', measured at (%.3f, %.3f), with_angle=%s, measured_theta=%.3f rad (%.1f°)", 
+                p.x, p.y, p.theta * 180.0 / M_PI, type.c_str(), noisy_x, noisy_y, 
+                with_angle_ ? "true" : "false", measured_theta, measured_theta * 180.0 / M_PI);
+
+    RCLCPP_DEBUG(this->get_logger(), "LIKELIHOOD_DEBUG: Found %zu expected features for type '%s'", expected_features.size(), type.c_str());
+
     double min_dist = std::numeric_limits<double>::max();
     map_features::Feature best_feature(0, 0, 0, type);
 
     double likelihood = 0.0;
 
-    for (const auto &exp : expected_features)
+    for (size_t i = 0; i < expected_features.size(); i++)
     {
+        const auto &exp = expected_features[i];
         double dist = std::hypot(noisy_x - exp.x, noisy_y - exp.y);
+        
+        RCLCPP_DEBUG(this->get_logger(), "LIKELIHOOD_DEBUG: Expected feature %zu at (%.3f, %.3f), distance=%.3f", 
+                    i, exp.x, exp.y, dist);
+        
         if (dist < min_dist)
         {
             min_dist = dist;
             best_feature = exp;
+            RCLCPP_DEBUG(this->get_logger(), "LIKELIHOOD_DEBUG: New best feature at distance %.3f", min_dist);
         }
     }
 
@@ -579,22 +780,26 @@ double ParticleFilter::computeLikelihoodFeature(const Particle &p, double delta_
     else if (scan_p_theta > M_PI)
         scan_p_theta -= 2 * M_PI;
 
+    RCLCPP_DEBUG(this->get_logger(), "LIKELIHOOD_DEBUG: scan_p_theta=%.3f rad (%.1f°), best_feature.theta=%.3f rad (%.1f°)", 
+                scan_p_theta, scan_p_theta * 180.0 / M_PI, best_feature.theta, best_feature.theta * 180.0 / M_PI);
+
     double expected_feature_angle = transformAngleToParticleFrame(best_feature.theta, scan_p_theta);
     double angle_likelihood = computeAngleLikelihood(measured_theta, expected_feature_angle, sigma_theta);
-    double distance_likelihood = std::exp(-(min_dist * min_dist) / (3*2* 2));
-    // RCLCPP_INFO(this->get_logger(), "min_dist: %.1f ", min_dist);
-
-    // RCLCPP_INFO(this->get_logger(), "sigma_pos: %.1f ", sigma_pos);
-
-    // RCLCPP_INFO(this->get_logger(), "distance_likelihood: %.1f ", distance_likelihood);
+    double distance_likelihood = std::exp(-(min_dist * min_dist) / (2*sigma_pos*sigma_pos));
+    
+    RCLCPP_DEBUG(this->get_logger(), "LIKELIHOOD_DEBUG: min_dist=%.3f, distance_likelihood=%.6f, sigma_pos=%.3f", 
+                min_dist, distance_likelihood, sigma_pos);
 
     if (with_angle_)
     {
         likelihood = (angle_likelihood + distance_likelihood);
+        RCLCPP_DEBUG(this->get_logger(), "LIKELIHOOD_DEBUG: WITH angle - angle_likelihood=%.6f, final_likelihood=%.6f", 
+                    angle_likelihood, likelihood);
     }
     else
     {
         likelihood = distance_likelihood;
+        RCLCPP_DEBUG(this->get_logger(), "LIKELIHOOD_DEBUG: WITHOUT angle - final_likelihood=%.6f", likelihood);
     }
 
     return likelihood;
@@ -917,6 +1122,9 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
         return;
     }
 
+    RCLCPP_INFO(this->get_logger(), "IM HEREEEE");
+
+
     rclcpp::Time scan_timestamp = msg->header.stamp;
 
     geometry_msgs::msg::TransformStamped scan_tf;
@@ -958,9 +1166,10 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
         delta_scan_theta -= 2 * M_PI;
 
 
-    for (auto &p : particles_)
+    for (size_t particle_idx = 0; particle_idx < particles_.size(); particle_idx++)
     {
-        double likelihood = 1.0; // Start with 1.0
+        auto &p = particles_[particle_idx];
+        double likelihood = 0; // Start with 1.0
 
         for (const auto &obs_msg : msg->features)
         {
@@ -988,20 +1197,29 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
             // Actually compute the feature likelihood
             double feature_likelihood = computeLikelihoodFeature(p, delta_scan_x, delta_scan_y, delta_scan_theta, noisy_x, noisy_y, measured_theta, sigma_pos, sigma_theta, obs.type);
 
-            // RCLCPP_INFO(this->get_logger(), "feature likelihood: %.1f", likelihood);
+            // DEBUG: Log feature likelihood computation
+            RCLCPP_DEBUG(this->get_logger(), "PARTICLE_DEBUG: Particle %zu - feature_likelihood=%.6f, confidence=%.3f", 
+                        particle_idx, feature_likelihood, obs.confidence);
 
             // Apply the reliability factor correctly
-            likelihood *= ( 0.2 +  feature_likelihood * obs.confidence);
+            likelihood += feature_likelihood * obs.confidence * 10;
         }
 
         double theta_degrees = p.theta * 180.0 / M_PI;
 
-        // RCLCPP_INFO(this->get_logger(), "likelihood: %.1f  of particle p.x: %.1f , p.y: %.1f and p.theta: %.1f degrees", likelihood, p.x, p.y, theta_degrees);
+        // DEBUG: Log particle weight update
+        double old_weight = p.weight;
+        RCLCPP_DEBUG(this->get_logger(), "PARTICLE_DEBUG: Particle %zu at (%.3f, %.3f, %.1f°) - total_likelihood=%.6f, old_weight=%.6f", 
+                    particle_idx, p.x, p.y, theta_degrees, likelihood, old_weight);
 
         // Gentle weight update instead of direct multiplication
-        double learning_rate = 0.7; // How much to trust this measurement
+        double learning_rate = 0.8; // How much to trust this measurement
         double new_weight = p.weight * likelihood;
         p.weight = learning_rate * new_weight + (1.0 - learning_rate) * p.weight;
+
+        // DEBUG: Log weight after update
+        RCLCPP_DEBUG(this->get_logger(), "PARTICLE_DEBUG: Particle %zu - new_weight=%.6f, final_weight=%.6f", 
+                    particle_idx, new_weight, p.weight);
 
         // Less harsh space penalty
         bool penalize = !isParticleInFreeSpace(p.x, p.y, pgm, resolution, origin);
@@ -1132,13 +1350,13 @@ void ParticleFilter::resampleParticles(ResamplingAmount type, ResamplingMethod m
     }
 
     // **IMPROVEMENT 4: Gentle weight reset with small noise for diversity**
-    double base_weight = 1.0 / num_particles_;
+/*     double base_weight = 1.0 / num_particles_;
     std::uniform_real_distribution<double> noise_dist(0.95, 1.05); // ±5% noise
 
     for (auto &p : particles_)
     {
         p.weight = base_weight * noise_dist(generator_); // Add small diversity
-    }
+    } */
 
     // Normalize to ensure weights sum to 1
     normalizeWeights();

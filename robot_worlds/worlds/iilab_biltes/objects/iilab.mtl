@@ -1,148 +1,80 @@
-# S3DIS Area 5 Realistic Colors - No Textures
-# Based on actual Stanford S3DIS room colors
 
-# =============================================================================
-# MAIN STRUCTURAL MATERIALS
-# =============================================================================
-
-# Material__25 - Main walls (brighter for better object contrast)
+# Material__25 - Main walls
 newmtl Material__25
-Kd 1 1 1    # Light off-white walls for better contrast
-Ka 0.35 0.33 0.31
-Ks 0.12 0.12 0.12
-Ns 20
-d 1.0
+Kd 0.90 0.88 0.79    # Off-white with subtle yellow tone
+Ka 0.60 0.58 0.56
+Ks 0.30 0.30 0.30
+Ns 40
 
-# Material__26 - Beams (concrete gray)
+# Material__26 - Beams
 newmtl Material__26
-Kd 0.65 0.62 0.58    # Concrete beam color
-Ka 0.20 0.19 0.18
-Ks 0.08 0.08 0.08
-Ns 15
+Kd 0.62 0.60 0.58    # Concrete gray
+Ka 0.45 0.43 0.42
+Ks 0.20 0.20 0.20
+Ns 30
 d 1.0
 
-# Material__27_1 - Columns (brushed aluminum)
+# Material__27_1 - Columns
 newmtl Material__27_1
-Kd 0.72 0.70 0.68    # Light aluminum
-Ka 0.25 0.24 0.23
+Kd 0.55 0.53 0.51    # Darker concrete
+Ka 0.20 0.19 0.18
 Ks 0.45 0.45 0.45
 Ns 50
 d 1.0
 
-# Material__28 - Windows (light blue tinted glass)
+# Material__28 - Windows
 newmtl Material__28
-Kd 0.82 0.88 0.92    # Light blue glass
-Ka 0.30 0.35 0.38
+Kd 0.45 0.68 0.98    # Blue tinted glass
+Ka 0.35 0.40 0.60
 Ks 0.70 0.70 0.70
 Ns 80
-d 0.6
+d 0.9
 
-# Material__28_2 - Doors (clean white)
+# Material__28_2 - Doors
 newmtl Material__28_2
-Kd 0.92 0.90 0.88    # Clean door white
+Kd 0.85 0.83 0.81    # Clean white
 Ka 0.32 0.30 0.28
 Ks 0.20 0.20 0.20
 Ns 30
 d 1.0
 
-# Material__30 - Floor (office carpet)
+# Material__30 - Ceiling
 newmtl Material__30
-Kd 0.60 0.65 0.70    # Light blue-gray carpet
-Ka 0.25 0.28 0.32
-Ks 0.05 0.05 0.05
-Ns 8
+Kd 0.78 0.76 0.74    # Light gray
+Ka 0.55 0.53 0.52
+Ks 0.10 0.10 0.10
+Ns 20
 d 1.0
 
-# Material__31 - Window frames (steel gray)
+# Material__31 - Window frames
 newmtl Material__31
-Kd 0.78 0.76 0.74    # Steel window frames
-Ka 0.28 0.27 0.26
+Kd 0.40 0.38 0.36    # Dark gray frames
+Ka 0.20 0.19 0.18
 Ks 0.40 0.40 0.40
 Ns 45
 d 1.0
 
-# Material__32 - Accent elements (muted green)
+# Material__32 - Accent elements
 newmtl Material__32
-Kd 0.35 0.55 0.35    # Muted office green
-Ka 0.15 0.22 0.15
-Ks 0.20 0.25 0.20
+Kd 1 1 1    # White
+Ka 0.20 0.22 0.18
+Ks 0.15 0.18 0.15
 Ns 25
 d 1.0
 
 # Default_Material - General surfaces
 newmtl Default_Material
-Kd 0.80 0.78 0.75    # Neutral gray
+Kd 0.72 0.70 0.68    # Neutral gray
 Ka 0.25 0.24 0.23
 Ks 0.15 0.15 0.15
 Ns 20
 d 1.0
 
-# =============================================================================
-# ADDITIONAL OFFICE COLORS FOR VARIETY
-# =============================================================================
-
-# galao - Alternative floor (neutral carpet)
+# galao - Floor
 newmtl galao
-Kd 0.7 0.7 0.7    # Medium beige carpet
-Ka 0.22 0.21 0.19
-Ks 0.03 0.03 0.03
-Ns 5
+Kd 0.65 0.60 0.50    # Beige floor
+Ka 0.50 0.48 0.40
+Ks 0.15 0.15 0.15
+Ns 25               
 d 1.0
 
-# Ceiling material (bright white)
-newmtl ceiling
-Kd 0.94 0.92 0.90    # Bright ceiling
-Ka 0.40 0.38 0.36
-Ks 0.10 0.10 0.10
-Ns 15
-d 1.0
-
-# Dark wood furniture
-newmtl dark_wood
-Kd 0.45 0.32 0.22    # Dark mahogany
-Ka 0.18 0.13 0.09
-Ks 0.35 0.25 0.18
-Ns 40
-d 1.0
-
-# Light wood furniture  
-newmtl light_wood
-Kd 0.75 0.62 0.45    # Light pine
-Ka 0.25 0.21 0.16
-Ks 0.30 0.25 0.20
-Ns 32
-d 1.0
-
-# Professional fabric (chairs)
-newmtl fabric_blue
-Kd 0.28 0.32 0.42    # Professional blue-gray
-Ka 0.12 0.14 0.18
-Ks 0.05 0.05 0.05
-Ns 8
-d 1.0
-
-# Professional fabric (chairs - variant)
-newmtl fabric_gray
-Kd 0.35 0.37 0.40    # Professional gray
-Ka 0.15 0.16 0.17
-Ks 0.05 0.05 0.05
-Ns 8
-d 1.0
-
-# =============================================================================
-# S3DIS AREA 5 COLOR PALETTE SUMMARY:
-# =============================================================================
-# 
-# FLOORS: Professional carpets (0.35, 0.40, 0.50) - Material__30
-# WALLS: Off-white with warmth (0.88, 0.85, 0.82) - Material__25  
-# CEILING: Bright white (0.94, 0.92, 0.90) - ceiling
-# BEAMS: Concrete gray (0.65, 0.62, 0.58) - Material__26
-# COLUMNS: Light aluminum (0.72, 0.70, 0.68) - Material__27_1
-# WINDOWS: Light blue glass (0.82, 0.88, 0.92) - Material__28
-# DOORS: Clean white (0.92, 0.90, 0.88) - Material__28_2
-# FRAMES: Steel gray (0.78, 0.76, 0.74) - Material__31
-# ACCENTS: Muted green (0.35, 0.55, 0.35) - Material__32
-#
-# These colors create realistic S3DIS-style indoor environments
-# with proper contrast and office-appropriate color schemes!
-# =============================================================================
