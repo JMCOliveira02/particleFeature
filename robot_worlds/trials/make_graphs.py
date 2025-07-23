@@ -61,20 +61,20 @@ if not csv_files:
         print(f"  - {file}")
     exit(1)
 
-print("📁 Available CSV files:")
-for i, file in enumerate(csv_files):
-    print(f"  {i+1}. {file}")
+# Sort CSV files by modification time (most recent first)
+csv_files_with_time = [(f, os.path.getmtime(f)) for f in csv_files]
+csv_files_sorted = sorted(csv_files_with_time, key=lambda x: x[1], reverse=True)
+csv_files = [f[0] for f in csv_files_sorted]
 
-# Use the first CSV file or let user specify
-if len(csv_files) == 1:
-    csv_file = csv_files[0]
-    print(f"🎯 Using: {csv_file}")
-elif 'Nave_A_MM_semi.csv' in csv_files:
-    csv_file = 'Nave_A_MM_semi.csv'
-    print(f"🎯 Using default: {csv_file}")
-else:
-    csv_file = csv_files[0]
-    print(f"🎯 Using first available: {csv_file}")
+print("📁 Available CSV files (sorted by date, newest first):")
+for i, file in enumerate(csv_files):
+    mod_time = os.path.getmtime(file)
+    time_str = pd.to_datetime(mod_time, unit='s').strftime('%Y-%m-%d %H:%M:%S')
+    print(f"  {i+1}. {file} (modified: {time_str})")
+
+# Always use the most recent CSV file
+csv_file = csv_files[0]
+print(f"🎯 Using most recent file: {csv_file}")
 
 # Load CSV
 try:

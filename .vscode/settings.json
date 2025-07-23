@@ -85,7 +85,8 @@
         "source_location": "cpp",
         "future": "cpp",
         "shared_mutex": "cpp",
-        "stdfloat": "cpp"
+        "stdfloat": "cpp",
+        "ranges": "cpp"
     },
     "cmake.sourceDirectory": "/home/joao/ros2_ws/src/robot_worlds",
     "python.autoComplete.extraPaths": [

@@ -6,8 +6,8 @@ WorldInfo {
 }
 Viewpoint {
   fieldOfView 2
-  orientation 0.05362197759166185 0.02186941818007229 -0.9983217978525885 3.9396269306175182
-  position -0.5024286905496264 1.0604889397458332 2.5769855097563035
+  orientation 0.04560930582744094 -0.02217672284693993 -0.9987131641195629 4.0204539438879605
+  position -0.291567470294383 0.43175043289022286 2.4557924064134884
   follow "robot"
   followType "Mounted Shot"
 }
@@ -1039,7 +1039,14 @@ Solid {
   name "square_column(2)"
 }
 Solid {
-  translation -16.52 2.65 2.12
+  translation -16.58 2.72 2.12
+  children [
+    CadShape {
+      url [
+        "objects/column.obj"
+      ]
+    }
+  ]
   name "square_column(4)"
 }
 Solid {

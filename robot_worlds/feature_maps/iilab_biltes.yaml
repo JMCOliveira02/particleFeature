@@ -142,15 +142,15 @@ features:
     orientation: { theta: 0 }
 
   - type: column
-    position: { x: -16.52, y: 2.65 }
+    position: { x: -16.7, y: 2.65 }
     orientation: { theta: 0 }
 
   - type: column
-    position: { x: -22.63, y: 2.72 }
+    position: { x: -22.76, y: 2.72 }
     orientation: { theta: 0 }
 
   - type: column
-    position: { x: -22.59, y: 0.16 }
+    position: { x: -22.73, y: 0.16 }
     orientation: { theta: 0 }
 
   - type: column
@@ -167,7 +167,7 @@ features:
 
   # === CIRCULAR COLUMNS (round_column objects) ===
   - type: column_circular
-    position: { x: -22.57, y: 12.08 }
+    position: { x: -22.7, y: 12.08 }
     orientation: { theta: 0 }
 
   - type: column_circular
@@ -179,6 +179,10 @@ features:
     orientation: { theta: 0 }
 
   - type: column_circular
+    position: { x: -10.59, y: 9.58 }
+    orientation: { theta: 0 }
+
+  - type: column_circular
     position: { x: -4.57, y: 12.08 }
     orientation: { theta: 0 }
 
@@ -187,7 +191,7 @@ features:
     orientation: { theta: 0 }
 
   - type: column_circular
-    position: { x: -22.58, y: 9.58 }
+    position: { x: -22.7, y: 9.58 }
     orientation: { theta: 0 }
 
   - type: column_circular

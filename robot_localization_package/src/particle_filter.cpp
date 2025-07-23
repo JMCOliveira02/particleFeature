@@ -77,7 +77,8 @@ ParticleFilter::ParticleFilter() : Node("particle_filter"),
                                     msg_odom_base_link_(nullptr), 
                                     last_map_msg_(nullptr),
                                     first_odom_received_(false),      // Add these
-                                    first_features_received_(false)   // Add these
+                                    first_features_received_(false),   // Add these
+                                    resample_cooldown_counter_(0)     // Initialize cooldown counter
 {
     std::cout << "ParticleFilter Constructor START" << std::endl;
     RCLCPP_INFO(this->get_logger(), "Initializing particle filter node.");
@@ -131,7 +132,7 @@ ParticleFilter::ParticleFilter() : Node("particle_filter"),
     tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
 
     // Create a timer to publish the estimated pose and particles
-    timer_pose_ = create_wall_timer(std::chrono::milliseconds(500), std::bind(&ParticleFilter::publishEstimatedPose, this));
+    timer_pose_ = create_wall_timer(std::chrono::milliseconds(300), std::bind(&ParticleFilter::publishEstimatedPose, this));
     
     // Create a timer to publish the feature map markers for visualization
     timer_feature_map_ = create_wall_timer(std::chrono::milliseconds(2000), std::bind(&ParticleFilter::publishFeatureMapMarkers, this));
@@ -398,7 +399,7 @@ void ParticleFilter::publishFeatureMapMarkers()
         // Set position
         marker.pose.position.x = feature_ptr->x;
         marker.pose.position.y = feature_ptr->y;
-        marker.pose.position.z = 0.5; // Raise it a bit above ground for visibility
+        marker.pose.position.z = 0.05; // Raise it a bit above ground for visibility
 
         // Set orientation - convert from degrees to radians
         tf2::Quaternion q;
@@ -438,21 +439,21 @@ void ParticleFilter::publishFeatureMapMarkers()
         }
         else if (feature_ptr->type == "window" || feature_ptr->type == "window_big" || feature_ptr->type == "window_small")
         {
-            // Blue arrows for windows - longer to show orientation clearly
+            // Bright cyan arrows for windows - longer to show orientation clearly, maximum visibility on dark backgrounds
             marker.scale.x = 1.2;  // length
-            marker.scale.y = 0.1;  // width
-            marker.scale.z = 0.1;  // height
+            marker.scale.y = 0.15;  // width
+            marker.scale.z = 0.15;  // height
             
-            marker.color.r = 0.0;
-            marker.color.g = 0.0;
+            marker.color.r = 0.0;  // Bright cyan
+            marker.color.g = 1.0;
             marker.color.b = 1.0;
-            marker.color.a = 0.8;
+            marker.color.a = 1.0;  // Full opacity for maximum brightness
         }
         else if (feature_ptr->type == "chair")
         {
             // Purple arrows for chairs
             marker.scale.x = 0.6;  // length
-            marker.scale.y = 0.08; // width
+            marker.scale.y = 0.16; // width
             marker.scale.z = 0.08; // height
             
             marker.color.r = 0.5;
@@ -749,6 +750,7 @@ double ParticleFilter::computeLikelihoodFeature(const Particle &p, double delta_
     RCLCPP_DEBUG(this->get_logger(), "LIKELIHOOD_DEBUG: Particle at (%.3f, %.3f, %.1f°), feature type='%s', measured at (%.3f, %.3f), with_angle=%s, measured_theta=%.3f rad (%.1f°)", 
                 p.x, p.y, p.theta * 180.0 / M_PI, type.c_str(), noisy_x, noisy_y, 
                 with_angle_ ? "true" : "false", measured_theta, measured_theta * 180.0 / M_PI);
+        updatePoseWithOdometry();
 
     RCLCPP_DEBUG(this->get_logger(), "LIKELIHOOD_DEBUG: Found %zu expected features for type '%s'", expected_features.size(), type.c_str());
 
@@ -792,13 +794,13 @@ double ParticleFilter::computeLikelihoodFeature(const Particle &p, double delta_
 
     if (with_angle_)
     {
-        likelihood = (angle_likelihood + distance_likelihood);
+        likelihood = std::pow((angle_likelihood + distance_likelihood),2);
         RCLCPP_DEBUG(this->get_logger(), "LIKELIHOOD_DEBUG: WITH angle - angle_likelihood=%.6f, final_likelihood=%.6f", 
                     angle_likelihood, likelihood);
     }
     else
     {
-        likelihood = distance_likelihood;
+        likelihood = std::pow(distance_likelihood,2);
         RCLCPP_DEBUG(this->get_logger(), "LIKELIHOOD_DEBUG: WITHOUT angle - final_likelihood=%.6f", likelihood);
     }
 
@@ -1077,12 +1079,12 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
             p.x += delta_x_robot * std::cos(p.theta) - delta_y_robot * std::sin(p.theta) + noise_x(generator_);
             p.y += delta_x_robot * std::sin(p.theta) + delta_y_robot * std::cos(p.theta) + noise_y(generator_);
             p.theta += delta_theta_odom + noise_theta(generator_);
-
-/*             bool penalize = !isParticleInFreeSpace(p.x, p.y, pgm, resolution, origin);
+            
+            bool penalize = !isParticleInFreeSpace(p.x, p.y, pgm, resolution, origin);
             if (penalize)
             {
-                p.weight *= 0.1; // Less harsh than /4
-            } */
+                p.weight *= 0.01; // Less harsh than /4
+            } 
 
             if (p.theta > M_PI)
                 p.theta -= 2 * M_PI;
@@ -1202,7 +1204,7 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
                         particle_idx, feature_likelihood, obs.confidence);
 
             // Apply the reliability factor correctly
-            likelihood += feature_likelihood * obs.confidence * 10;
+            likelihood += feature_likelihood * obs.confidence ;
         }
 
         double theta_degrees = p.theta * 180.0 / M_PI;
@@ -1213,7 +1215,7 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
                     particle_idx, p.x, p.y, theta_degrees, likelihood, old_weight);
 
         // Gentle weight update instead of direct multiplication
-        double learning_rate = 0.8; // How much to trust this measurement
+        double learning_rate = 0.9; // How much to trust this measurement
         double new_weight = p.weight * likelihood;
         p.weight = learning_rate * new_weight + (1.0 - learning_rate) * p.weight;
 
@@ -1225,7 +1227,7 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
         bool penalize = !isParticleInFreeSpace(p.x, p.y, pgm, resolution, origin);
         if (penalize)
         {
-            p.weight *= 0.01; // Less harsh than /4
+  
         }
         else
         {
@@ -1279,8 +1281,9 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
         // adaptive_threshold *= 0.5; // Much more conservative
         RCLCPP_INFO(this->get_logger(), "⚠️ Few features detected (%zu), keeping conservative threshold", 
                     msg->features.size());
+        
     }
-
+    else{
     // **AGGRESSIVE: Use OR instead of AND, lower weight ratio threshold**
     bool ess_trigger = (ess <= num_particles_ * adaptive_threshold);
     double ess_threshold_value = num_particles_ * adaptive_threshold;
@@ -1297,21 +1300,13 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
     {
         RCLCPP_INFO(this->get_logger(), "✅ NO RESAMPLING: ESS=%.1f is sufficient (threshold=%.1f)",
                     ess, ess_threshold_value);
-    }
+    }}
 
     // Continuous small replacement to prevent stagnation
-    if (!resample_flag_)
-    {
-        // Always replace a small percentage of worst particles
-        replaceWorstParticles_pgm(replace_worst_percentage_); // Replace 2% continuously
-    }
-    else
-    {
-        // CRITICAL: Clear resample flag after completing measurement update
-        // This allows normal particle-based estimation to resume
-        RCLCPP_INFO(this->get_logger(), "✅ Measurement update complete - clearing resample flag, resuming normal estimation");
-        resample_flag_ = false;
-    }
+    // Always replace a small percentage of worst particles
+    replaceWorstParticles_pgm(replace_worst_percentage_); // Replace 2% continuously
+    
+    // REMOVED: Resample flag logic that was interfering with pose estimation
 
 }
 
@@ -1330,7 +1325,7 @@ void ParticleFilter::resampleParticles(ResamplingAmount type, ResamplingMethod m
 
     RCLCPP_INFO(this->get_logger(), "RESAMPLING: Max weight: %.6f, ESS: %.1f", max_weight, ess);
 
-    resample_flag_ = true;
+    // REMOVED: resample_flag_ = true; - this was interfering with pose estimation
 
     // Perform resampling based on the specified method
     switch (method)
@@ -1361,7 +1356,10 @@ void ParticleFilter::resampleParticles(ResamplingAmount type, ResamplingMethod m
     // Normalize to ensure weights sum to 1
     normalizeWeights();
 
-    RCLCPP_INFO(this->get_logger(), "🔄 Resampling completed - pose estimation will be paused until weights develop");
+    // Remove cooldown - always allow particle-based estimation
+    // resample_cooldown_counter_ = 2;  // REMOVED - this was causing pose to drift outside map
+    
+    RCLCPP_INFO(this->get_logger(), "🔄 Resampling completed - particles ready for pose estimation");
 
     // **IMPROVEMENT 5: More intelligent injection strategy**
     iterationCounter++;
@@ -1399,8 +1397,8 @@ void ParticleFilter::updatePoseWithOdometry()
     double delta_y_odom = odom_y - pose_last_odom_y_;
     double delta_distance = std::hypot(delta_x_odom, delta_y_odom);
     
-    RCLCPP_INFO(this->get_logger(), "🚗 ODOMETRY-ONLY UPDATE: delta_distance=%.4f, delta_angle=%.4f", 
-                delta_distance, std::abs(odom_theta - pose_last_odom_theta_));
+    //RCLCPP_INFO(this->get_logger(), "🚗 ODOMETRY-ONLY UPDATE: delta_distance=%.4f, delta_angle=%.4f", 
+    //            delta_distance, std::abs(odom_theta - pose_last_odom_theta_));
     
     if (delta_distance > motion_delta_distance_ || std::abs(odom_theta - pose_last_odom_theta_) > motion_delta_angle_) {
         
@@ -1438,10 +1436,15 @@ void ParticleFilter::updatePoseWithOdometry()
         pose_last_odom_theta_ = odom_theta;
     }
     
-    // Keep covariances high during odometry-only mode to indicate uncertainty
-    pose_covariance_[0] = std::max(pose_covariance_[0] * 1.05, 0.1);  // Slowly increase uncertainty
-    pose_covariance_[1] = std::max(pose_covariance_[1] * 1.05, 0.1);
-    pose_covariance_[2] = std::max(pose_covariance_[2] * 1.05, 0.05);
+    // Keep covariances fixed during odometry-only mode
+    // pose_covariance_[0] = std::max(pose_covariance_[0] * 1.05, 0.1);  // Slowly increase uncertainty
+    // pose_covariance_[1] = std::max(pose_covariance_[1] * 1.05, 0.1);
+    // pose_covariance_[2] = std::max(pose_covariance_[2] * 1.05, 0.05);
+    
+    // Use fixed covariances instead
+    pose_covariance_[0] = 0.2; // Higher uncertainty during odometry-only
+    pose_covariance_[1] = 0.2;
+    pose_covariance_[2] = 0.1;
 }
 
 void ParticleFilter::computeEstimatedPose()
@@ -1449,15 +1452,25 @@ void ParticleFilter::computeEstimatedPose()
     if (particles_.empty())
         return;
 
-    // Check if we just resampled - if so, skip full pose estimation but update with odometry
-    if (resample_flag_) {
-        RCLCPP_INFO(this->get_logger(), "🔄 RESAMPLE MODE: Using odometry-only update - waiting for next measurement");
+    // Calculate current ESS to check if particle weights have developed
+    double ess = 1.0 / std::accumulate(particles_.begin(), particles_.end(), 0.0,
+                                       [](double sum, const Particle &p)
+                                       { return sum + (p.weight * p.weight); });
+    double ess_ratio = ess / num_particles_;
+    
+    // SIMPLIFIED: Always use particle-based estimation when particles are available
+    // No more cooldown or complex odometry-only logic that can drift outside map
+    
+    // Only use odometry if we have no meaningful particles at all
+    if (ess_ratio > 0.95) {  // Extremely high ESS means all particles have nearly identical weights
+        RCLCPP_WARN(this->get_logger(), "⚠️ All particles have identical weights (ESS=%.3f) - using odometry", ess_ratio);
         updatePoseWithOdometry();
         return;
     }
 
-    // NORMAL PARTICLE-BASED ESTIMATION (after resampling period ends)
-    RCLCPP_DEBUG(this->get_logger(), "✅ NORMAL MODE: Using particle-based pose estimation");
+    // NORMAL PARTICLE-BASED ESTIMATION (weights have developed sufficiently)
+    // RCLCPP_INFO(this->get_logger(), "✅ PARTICLE MODE: Using particle-based pose estimation - ESS=%.2f/%.0f (%.3f)", 
+    //             ess, num_particles_, ess_ratio);
 
     std::vector<Particle> sorted_particles = particles_;
     std::sort(sorted_particles.begin(), sorted_particles.end(),
@@ -1499,37 +1512,38 @@ void ParticleFilter::computeEstimatedPose()
     if (theta_last_final < -M_PI)
         theta_last_final += 2 * M_PI;
 
-    // --- Covariance computation ---
-    double cov_xx = 0, cov_yy = 0, cov_tt = 0;
-    double cov_xy = 0, cov_xt = 0, cov_yt = 0;
+    // --- Covariance computation (DISABLED) ---
+    // double cov_xx = 0, cov_yy = 0, cov_tt = 0;
+    // double cov_xy = 0, cov_xt = 0, cov_yt = 0;
 
-    for (int i = 0; i < num_top_particles; i++)
-    {
-        const auto &p = sorted_particles[i];
-        double dx = p.x - x_last_final;
-        double dy = p.y - y_last_final;
+    // for (int i = 0; i < num_top_particles; i++)
+    // {
+    //     const auto &p = sorted_particles[i];
+    //     double dx = p.x - x_last_final;
+    //     double dy = p.y - y_last_final;
 
-        // Wrap angle difference to [-pi, pi]
-        double dtheta = p.theta - theta_last_final;
-        while (dtheta > M_PI) dtheta -= 2 * M_PI;
-        while (dtheta < -M_PI) dtheta += 2 * M_PI;
+    //     // Wrap angle difference to [-pi, pi]
+    //     double dtheta = p.theta - theta_last_final;
+    //     while (dtheta > M_PI) dtheta -= 2 * M_PI;
+    //     while (dtheta < -M_PI) dtheta += 2 * M_PI;
 
-        cov_xx += p.weight * dx * dx;
-        cov_yy += p.weight * dy * dy;
-        cov_tt += p.weight * dtheta * dtheta;
+    //     cov_xx += p.weight * dx * dx;
+    //     cov_yy += p.weight * dy * dy;
+    //     cov_tt += p.weight * dtheta * dtheta;
 
-    }
+    // }
 
-    if (weight_sum > 0)
-    {
-        cov_xx /= weight_sum;
-        cov_yy /= weight_sum;
-        cov_tt /= weight_sum;
-    }
+    // if (weight_sum > 0)
+    // {
+    //     cov_xx /= weight_sum;
+    //     cov_yy /= weight_sum;
+    //     cov_tt /= weight_sum;
+    // }
 
-    pose_covariance_[0] = cov_xx; // Covariance of x
-    pose_covariance_[1] = cov_yy; // Covariance of y
-    pose_covariance_[2] = cov_tt; // Covariance of theta
+    // Use simple fixed covariances instead
+    pose_covariance_[0] = 0.1; // Fixed covariance for x
+    pose_covariance_[1] = 0.1; // Fixed covariance for y
+    pose_covariance_[2] = 0.05; // Fixed covariance for theta
 }
 
 // publish the estimated pose and the map to odom transform
@@ -1546,8 +1560,8 @@ void ParticleFilter::publishEstimatedPose()
     computeEstimatedPose();
 
     // Always publish the pose - even if it was updated via odometry-only
-    RCLCPP_INFO(this->get_logger(), "📍 PUBLISHING POSE: (%.3f, %.3f, %.1f°)", 
-                x_last_final, y_last_final, theta_last_final * 180.0 / M_PI);
+    // RCLCPP_INFO(this->get_logger(), "📍 PUBLISHING POSE: (%.3f, %.3f, %.1f°)", 
+    //             x_last_final, y_last_final, theta_last_final * 180.0 / M_PI);
 
     if (!msg_odom_base_link_)
     {
