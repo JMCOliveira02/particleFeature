@@ -1462,7 +1462,7 @@ void ParticleFilter::computeEstimatedPose()
     // No more cooldown or complex odometry-only logic that can drift outside map
     
     // Only use odometry if we have no meaningful particles at all
-    if (ess_ratio > 0.90) {  // Extremely high ESS means all particles have nearly identical weights
+    if (ess_ratio > 0.85) {  // Extremely high ESS means all particles have nearly identical weights
         RCLCPP_WARN(this->get_logger(), "⚠️ All particles have identical weights (ESS=%.3f) - using odometry", ess_ratio);
         updatePoseWithOdometry();
         return;
