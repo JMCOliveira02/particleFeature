@@ -339,40 +339,40 @@ DEF ROBOT_1 Robot {
       translation 0 0 1.2
       rotation 0 1 0 0.4
       name "rangeFinder_0"
-      fieldOfView 1.3
-      width 350
-      height 350
-      minRange 0.2
+      fieldOfView 1
+      width 400
+      height 400
+      minRange 0.4
       maxRange 6
     }
     Camera {
       translation 0 0 1.2
       rotation 0 1 0 0.4
       name "camera_0"
-      fieldOfView 1.3
-      width 350
-      height 350
-      near 0.2
+      fieldOfView 1
+      width 400
+      height 400
+      near 0.4
       far 6
     }
     RangeFinder {
       translation 0 0 1.2
       rotation 0 1 0 -0.4
       name "rangeFinder_1"
-      fieldOfView 1.3
-      width 350
-      height 350
-      minRange 0.2
+      fieldOfView 1
+      width 400
+      height 400
+      minRange 0.4
       maxRange 6
     }
     Camera {
       translation 0 0 1.2
       rotation 0 1 0 -0.4
       name "camera_1"
-      fieldOfView 1.3
-      width 350
-      height 350
-      near 0.2
+      fieldOfView 1
+      width 400
+      height 400
+      near 0.4
       far 6
     }
     Lidar {
