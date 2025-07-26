@@ -175,6 +175,9 @@ void ParticleFilter::loadParameters()
     this->declare_parameter("map_yaml", std::string(""));
     this->declare_parameter("map_pgm", std::string(""));
 
+    this->declare_parameter("debug_particles", DEBUG_PARTICLES);
+    debug_mode_ = this->get_parameter("debug_particles").as_bool();
+
     success &= this->get_parameter("num_particles", num_particles_);
     success &= this->get_parameter("motion_delta_distance", motion_delta_distance_);
     success &= this->get_parameter("motion_delta_angle", motion_delta_angle_);
@@ -1034,10 +1037,8 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
         last_update_y_ = odom_y;
         last_update_theta_ = odom_theta;
         
-        // Initialize estimated pose to current odometry
-        x_last_final = odom_x;
-        y_last_final = odom_y;
-        theta_last_final = odom_theta;
+        // Initialize estimated pose using computeEstimatedPose function
+        computeEstimatedPose();
         
         first_odom_received_ = true;
         return; // Skip motion update on first message
@@ -1126,7 +1127,270 @@ void ParticleFilter::motionUpdate(const nav_msgs::msg::Odometry::SharedPtr msg)
         publishParticles_no_color();
     }
 }
-  
+
+void ParticleFilter::setDebugMode(bool enable) { 
+    debug_mode_ = enable; 
+}
+
+void ParticleFilter::debugTopParticles(const std::vector<DecodedMsg> &features, 
+                                       double delta_scan_x, double delta_scan_y, double delta_scan_theta)
+{
+    if (!debug_mode_) return;
+    
+    // Create filename with timestamp
+    auto now = std::chrono::system_clock::now();
+    auto time_t = std::chrono::system_clock::to_time_t(now);
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now.time_since_epoch()) % 1000;
+    
+    std::stringstream filename;
+    filename << "particle_debug_" 
+             << std::put_time(std::localtime(&time_t), "%Y%m%d_%H%M%S")
+             << "_" << std::setfill('0') << std::setw(3) << ms.count() 
+             << ".txt";
+    
+    std::ofstream debug_file(filename.str());
+    if (!debug_file.is_open()) {
+        RCLCPP_ERROR(this->get_logger(), "Failed to open debug file: %s", filename.str().c_str());
+        return;
+    }
+    
+    // Helper lambda to write to both file and console
+    auto log_both = [&](const std::string& message) {
+        debug_file << message << std::endl;
+        RCLCPP_INFO(this->get_logger(), "%s", message.c_str());
+    };
+    
+    // Helper lambda to write only to file (for detailed data)
+    auto log_file = [&](const std::string& message) {
+        debug_file << message << std::endl;
+    };
+    
+    // Sort particles by weight (highest first)
+    std::vector<std::pair<double, int>> particle_weights;
+    for (int i = 0; i < particles_.size(); i++) {
+        particle_weights.push_back({particles_[i].weight, i});
+    }
+    std::sort(particle_weights.rbegin(), particle_weights.rend());
+    
+    // Debug top 20 particles
+    int num_debug = std::min(20, (int)particle_weights.size());
+    
+    // Count features by type
+    std::map<std::string, int> feature_counts;
+    for (const auto &feature : features) {
+        feature_counts[feature.type]++;
+    }
+    
+    // Write header info
+    debug_file << "=== PARTICLE FILTER DEBUG OUTPUT ===" << std::endl;
+    debug_file << "Timestamp: " << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M:%S") << std::endl;
+    debug_file << "Total features detected: " << features.size() << std::endl;
+    
+    // Feature breakdown
+    debug_file << "Feature breakdown: ";
+    bool first = true;
+    for (const auto &pair : feature_counts) {
+        if (!first) debug_file << ", ";
+        debug_file << pair.second << " " << pair.first;
+        if (pair.second > 1) debug_file << "s";  // pluralize
+        first = false;
+    }
+    debug_file << std::endl;
+    
+    debug_file << "Delta scan: (" << delta_scan_x << ", " << delta_scan_y << ", " << delta_scan_theta << ")" << std::endl;
+    debug_file << "Debugging top " << num_debug << " particles" << std::endl;
+    debug_file << "========================================" << std::endl << std::endl;
+    
+    // Also log feature summary to console
+    std::stringstream feature_summary;
+    feature_summary << "Received measurement with " << features.size() << " features: ";
+    bool first_console = true;
+    for (const auto &pair : feature_counts) {
+        if (!first_console) feature_summary << ", ";
+        feature_summary << pair.second << " " << pair.first;
+        if (pair.second > 1) feature_summary << "s";  // pluralize
+        first_console = false;
+    }
+    log_both(feature_summary.str());
+    
+    log_both("=== DEBUGGING TOP " + std::to_string(num_debug) + " PARTICLES ===");
+    
+    for (int p_idx = 0; p_idx < num_debug; p_idx++) {
+        int particle_idx = particle_weights[p_idx].second;
+        const Particle &particle = particles_[particle_idx];
+        double weight = particle_weights[p_idx].first;
+        
+        std::stringstream particle_header;
+        particle_header << "\n--- PARTICLE " << particle_idx << " (rank " << (p_idx + 1) << ") ---";
+        log_file(particle_header.str());
+        
+        std::stringstream particle_info;
+        particle_info << "Particle pose: (" << std::fixed << std::setprecision(3) 
+                     << particle.x << ", " << particle.y << ", " 
+                     << std::setprecision(1) << (particle.theta * 180.0 / M_PI) 
+                     << "°), weight: " << std::setprecision(6) << weight;
+        log_file(particle_info.str());
+        
+        // Debug each feature for this particle
+        for (size_t f_idx = 0; f_idx < features.size(); f_idx++) {
+            const auto &feature = features[f_idx];
+            
+            // Transform to global for display purposes only
+            double cos_theta = std::cos(particle.theta - delta_scan_theta);
+            double sin_theta = std::sin(particle.theta - delta_scan_theta);
+            double scan_x = particle.x - delta_scan_x;
+            double scan_y = particle.y - delta_scan_y;
+            
+            double global_x = scan_x + feature.x * cos_theta - feature.y * sin_theta;
+            double global_y = scan_y + feature.x * sin_theta + feature.y * cos_theta;
+            
+            log_file("  Feature " + std::to_string(f_idx) + " [" + feature.type + "]:");
+            
+            std::stringstream feature_pos;
+            feature_pos << "    Scan says feature is at: (" << std::fixed << std::setprecision(3)
+                       << feature.x << ", " << feature.y << ") local, (" 
+                       << global_x << ", " << global_y << ") global";
+            log_file(feature_pos.str());
+            
+            if (feature.with_angle) {
+                double global_theta = feature.theta + particle.theta - delta_scan_theta;
+                std::stringstream angle_info;
+                angle_info << "    Scan says feature angle: " << std::fixed << std::setprecision(3)
+                          << global_theta << " rad (" << std::setprecision(1) 
+                          << (global_theta * 180.0 / M_PI) << "°)";
+                log_file(angle_info.str());
+            }
+            
+            // Use same logic as actual computation - get expected features in particle frame
+            std::vector<map_features::Feature> expected_features = 
+                getExpectedFeatures(particle, delta_scan_x, delta_scan_y, delta_scan_theta, feature.type);
+            
+            if (expected_features.empty()) {
+                log_file("    No expected features of type '" + feature.type + "' found");
+                continue;
+            }
+            
+            // Find closest expected feature using SAME logic as actual computation
+            double min_dist = std::numeric_limits<double>::max();
+            map_features::Feature best_expected(0, 0, 0, feature.type);
+            int best_idx = -1;
+            
+            for (size_t i = 0; i < expected_features.size(); i++) {
+                const auto &exp = expected_features[i];
+                double dist = std::hypot(feature.x - exp.x, feature.y - exp.y);
+                
+                if (dist < min_dist) {
+                    min_dist = dist;
+                    best_expected = exp;
+                    best_idx = i;
+                }
+            }
+            
+            // Convert best expected to global for display
+            double best_global_x = scan_x + best_expected.x * cos_theta - best_expected.y * sin_theta;
+            double best_global_y = scan_y + best_expected.x * sin_theta + best_expected.y * cos_theta;
+            
+            std::stringstream expected_pos;
+            expected_pos << "    Particle expects feature at: (" << std::fixed << std::setprecision(3)
+                        << best_global_x << ", " << best_global_y << ") [match " 
+                        << (best_idx + 1) << "/" << expected_features.size() << "]";
+            log_file(expected_pos.str());
+            
+            if (feature.with_angle) {
+                std::stringstream expected_angle;
+                expected_angle << "    Particle expects feature angle: " << std::fixed << std::setprecision(3)
+                              << best_expected.theta << " rad (" << std::setprecision(1)
+                              << (best_expected.theta * 180.0 / M_PI) << "°)";
+                log_file(expected_angle.str());
+            }
+            
+            // Use exact same likelihood computation as actual function
+            double sigma_x = std::sqrt(feature.covariance_pos[0][0]);
+            double sigma_y = std::sqrt(feature.covariance_pos[1][1]);
+            double sigma_theta = std::sqrt(feature.angle_variance);
+            double sigma_pos = std::sqrt((sigma_x * sigma_x + sigma_y * sigma_y));
+            
+            // Distance likelihood (same as actual computation)
+            double distance_error = min_dist;
+            double distance_likelihood = std::exp(-(distance_error * distance_error) / (2.0 * sigma_pos * sigma_pos));
+            
+            std::stringstream distance_info;
+            distance_info << "    Distance error: " << std::fixed << std::setprecision(3)
+                         << distance_error << " m, likelihood: " << std::setprecision(6) 
+                         << distance_likelihood;
+            log_file(distance_info.str());
+            
+            double angle_likelihood = 1.0;
+            double total_likelihood = distance_likelihood;
+            
+            if (feature.with_angle) {
+                // Use exact same angle computation as actual function
+                double scan_p_theta = particle.theta - delta_scan_theta;
+                if (scan_p_theta < -M_PI)
+                    scan_p_theta += 2 * M_PI;
+                else if (scan_p_theta > M_PI)
+                    scan_p_theta -= 2 * M_PI;
+                
+                double expected_feature_angle = transformAngleToParticleFrame(best_expected.theta, scan_p_theta);
+                angle_likelihood = computeAngleLikelihood(feature.theta, expected_feature_angle, sigma_theta);
+                total_likelihood = distance_likelihood * angle_likelihood;
+                
+                // Calculate angle error for display
+                double angle_error = feature.theta - expected_feature_angle;
+                while (angle_error > M_PI) angle_error -= 2 * M_PI;
+                while (angle_error < -M_PI) angle_error += 2 * M_PI;
+                
+                std::stringstream angle_error_info;
+                angle_error_info << "    Angle error: " << std::fixed << std::setprecision(3)
+                                << angle_error << " rad (" << std::setprecision(1)
+                                << (angle_error * 180.0 / M_PI) << "°), likelihood: "
+                                << std::setprecision(6) << angle_likelihood;
+                log_file(angle_error_info.str());
+            }
+            
+            std::stringstream final_likelihood;
+            final_likelihood << "    Final likelihood: " << std::fixed << std::setprecision(6)
+                            << total_likelihood << " (dist: " << distance_likelihood
+                            << " × angle: " << angle_likelihood << ")";
+            log_file(final_likelihood.str());
+            
+            // Log feature confidence impact
+            double confidence_weighted = total_likelihood * feature.confidence;
+            std::stringstream confidence_info;
+            confidence_info << "    Confidence: " << std::fixed << std::setprecision(3)
+                           << feature.confidence << ", weighted likelihood: "
+                           << std::setprecision(6) << confidence_weighted;
+            log_file(confidence_info.str());
+            
+            // Verify against actual computation
+            double actual_likelihood = computeLikelihoodFeature(
+                particle, delta_scan_x, delta_scan_y, delta_scan_theta, 
+                feature.x, feature.y, feature.theta, sigma_pos, sigma_theta, feature.type);
+            
+            if (std::abs(total_likelihood - actual_likelihood) > 1e-6) {
+                std::stringstream warning;
+                warning << "    ⚠️  DEBUG MISMATCH: computed=" << std::setprecision(6) 
+                       << total_likelihood << ", actual=" << actual_likelihood;
+                log_file(warning.str());
+                RCLCPP_WARN(this->get_logger(), "%s", warning.str().c_str());
+            }
+        }
+    }
+    
+    log_both("=== END PARTICLE DEBUG ===");
+    debug_file << "\n=== END OF DEBUG OUTPUT ===" << std::endl;
+    debug_file.close();
+    
+    // Log summary of what was written
+    std::stringstream summary;
+    summary << "Debug output written to: " << filename.str() 
+            << " (" << features.size() << " features analyzed)";
+    RCLCPP_INFO(this->get_logger(), "%s", summary.str().c_str());
+}
+
+
+
 void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::SharedPtr msg)
 {
     if (particles_.empty())
@@ -1257,6 +1521,17 @@ void ParticleFilter::measurementUpdate(const robot_msgs::msg::FeatureArray::Shar
             all_outside = false;
         }
     }
+
+    if (debug_mode_) {
+        std::vector<DecodedMsg> decoded_features;
+        for (const auto &feature_msg : msg->features) {
+            decoded_features.push_back(decodeMsg(feature_msg));
+        }
+        
+        // Debug before weight normalization
+        debugTopParticles(decoded_features, delta_scan_x, delta_scan_y, delta_scan_theta);
+    }
+
 
     if (all_outside == true)
     {
@@ -1412,6 +1687,39 @@ void ParticleFilter::computeEstimatedPose()
 {
     if (particles_.empty())
         return;
+
+    // Special case: if this is initialization (first_odom_received_ just became true),
+    // always initialize to particle distribution center, not based on ESS
+    static bool is_initialization = true;
+    if (is_initialization && first_odom_received_) {
+        // Initialize estimated pose to center of particle distribution (map frame)
+        double sum_x = 0.0, sum_y = 0.0, sum_cos = 0.0, sum_sin = 0.0;
+        for (const auto& particle : particles_) {
+            sum_x += particle.x;
+            sum_y += particle.y;
+            sum_cos += std::cos(particle.theta);
+            sum_sin += std::sin(particle.theta);
+        }
+        x_last_final = sum_x / particles_.size();
+        y_last_final = sum_y / particles_.size();
+        theta_last_final = std::atan2(sum_sin / particles_.size(), sum_cos / particles_.size());
+        
+        // Normalize angle
+        if (theta_last_final > M_PI)
+            theta_last_final -= 2 * M_PI;
+        if (theta_last_final < -M_PI)
+            theta_last_final += 2 * M_PI;
+        
+        pose_covariance_[0] = 0.15; // Higher initial uncertainty
+        pose_covariance_[1] = 0.15;
+        pose_covariance_[2] = 0.08;
+        
+        RCLCPP_INFO(this->get_logger(), "🎯 INITIALIZATION: Estimated pose set to particle center: (%.3f, %.3f, %.1f°)", 
+                    x_last_final, y_last_final, theta_last_final * 180.0 / M_PI);
+        
+        is_initialization = false; // Only do this once
+        return;
+    }
 
     // Calculate ESS to decide between odometry vs particle-based pose
     double ess = 1.0 / std::accumulate(particles_.begin(), particles_.end(), 0.0,

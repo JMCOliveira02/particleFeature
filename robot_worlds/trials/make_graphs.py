@@ -100,6 +100,23 @@ if missing_cols:
     print(f"Available columns: {list(df.columns)}")
     exit(1)
 
+# Convert numeric columns to float (handle any string values with spaces)
+numeric_cols = ['timestamp_real', 'real_x', 'real_y', 'real_theta', 'est_x', 'est_y', 'est_theta']
+for col in numeric_cols:
+    if col in df.columns:
+        try:
+            # Convert to string first, strip spaces, then convert to float
+            df[col] = pd.to_numeric(df[col].astype(str).str.strip(), errors='coerce')
+        except Exception as e:
+            print(f"⚠️ Warning: Could not convert column '{col}' to numeric: {e}")
+
+# Check for any NaN values after conversion
+nan_count = df[numeric_cols].isna().sum().sum()
+if nan_count > 0:
+    print(f"⚠️ Warning: {nan_count} NaN values found after numeric conversion")
+    print("First few rows with potential issues:")
+    print(df[numeric_cols].head())
+
 # Subtract initial time to normalize timestamps
 df['timestamp_normalized'] = df['timestamp_real'] - df['timestamp_real'].iloc[0]
 
@@ -107,7 +124,27 @@ df['timestamp_normalized'] = df['timestamp_real'] - df['timestamp_real'].iloc[0]
 df['positional_error'] = np.sqrt((df['est_x'] - df['real_x'])**2 + (df['est_y'] - df['real_y'])**2)
 
 # Compute angular error (more careful wrapping)
-df['angular_error'] = np.abs(wrap_to_pi(df['est_theta'] - df['real_theta']))
+try:
+    # Ensure both columns are numeric
+    est_theta_clean = pd.to_numeric(df['est_theta'], errors='coerce')
+    real_theta_clean = pd.to_numeric(df['real_theta'], errors='coerce')
+    
+    # Check for any remaining NaN values
+    if est_theta_clean.isna().any() or real_theta_clean.isna().any():
+        print("⚠️ Warning: NaN values detected in theta columns after conversion")
+        print(f"est_theta NaN count: {est_theta_clean.isna().sum()}")
+        print(f"real_theta NaN count: {real_theta_clean.isna().sum()}")
+    
+    # Compute angular difference
+    angle_diff = est_theta_clean - real_theta_clean
+    df['angular_error'] = np.abs(wrap_to_pi(angle_diff))
+    
+except Exception as e:
+    print(f"❌ Error computing angular error: {e}")
+    print("Sample values causing issues:")
+    print(f"est_theta sample: {df['est_theta'].head()}")
+    print(f"real_theta sample: {df['real_theta'].head()}")
+    exit(1)
 
 # Detect when estimated pose is "stuck" (not changing)
 df['est_position_change'] = np.sqrt(df['est_x'].diff()**2 + df['est_y'].diff()**2)

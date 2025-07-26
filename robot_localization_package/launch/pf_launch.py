@@ -206,7 +206,7 @@ def generate_launch_description():
         webots,
         robot_controller,
         # fake_detector,
-        path_tracker,
+        #path_tracker,
         # corner_detector,
         particle_filter,
         #send_scan,

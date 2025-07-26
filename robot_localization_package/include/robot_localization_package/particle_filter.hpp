@@ -25,7 +25,10 @@
 #include <string>
 #include <cmath>
 #include <sstream>
+#include <chrono>
 #include <iomanip>
+#include <sstream>
+#include <map>
 
 #define NUM_PARTICLES 100.0
 
@@ -44,6 +47,8 @@
 #define REPLACE_WORST_PERCENTAGE 0.3
 
 #define ESTIMATE_NUM_PARTICLES 10
+
+#define DEBUG_PARTICLES false
 
 struct PGMImage
 {
@@ -92,6 +97,10 @@ public:
     ParticleFilter();
 
 private:
+
+    bool debug_mode_ = false;  // Add this to your class members
+    
+    
     // Particle structure
     struct Particle
     {
@@ -247,6 +256,10 @@ private:
     void publishParticles_no_color();
     void publishFeatureMapMarkers();
 
+    void debugTopParticles(const std::vector<DecodedMsg> &features, 
+                                       double delta_scan_x, double delta_scan_y, double delta_scan_theta);
+
+    void setDebugMode(bool enable);
     
     // Feature handling
     void storeMapMessage(const robot_msgs::msg::FeatureArray::SharedPtr msg);

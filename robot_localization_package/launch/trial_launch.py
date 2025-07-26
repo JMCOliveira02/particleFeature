@@ -13,13 +13,20 @@ from launch.events import Shutdown
 def generate_launch_description():
     trial_type = "Nave_A_MM"
 
-    # Waypoint Follower
-    waypoint_file = f"/home/biltes/ros_ws/src/robot_waypoint_follower/robot_waypoint_follower/{trial_type}.yaml"
+    # Waypoint Follower - using the newer trajectory
+    waypoint_file = f"/home/biltes/ros_ws/src/robot_waypoint_follower/robot_waypoint_follower/Nave_A_MM_new.yaml"
     waypoint_follower = Node(
         package='robot_waypoint_follower',
         executable='waypoint_follower',
         name='waypoint_follower',
-        parameters=[{'waypoints_file' : waypoint_file}], 
+        parameters=[{
+            'waypoints_file': waypoint_file,
+            'linear_speed': 0.26,
+            'angular_speed': 0.4,
+            'position_threshold': 0.2,
+            'orientation_threshold': 0.3,
+            'strict_final_orientation': True,
+        }], 
         output='screen'
     )
 
